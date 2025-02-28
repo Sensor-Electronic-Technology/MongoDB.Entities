@@ -237,10 +237,8 @@ public class Update<T> : UpdateBase<T> where T : IEntity
     /// </summary>
     /// <param name="operation">b => b.Inc(x => x.PropName, Value)</param>
     /// <returns></returns>
-    public Update<T> Modify(Func<UpdateDefinitionBuilder<T>, UpdateDefinition<T>> operation)
-    {
+    public Update<T> Modify(Func<UpdateDefinitionBuilder<T>, UpdateDefinition<T>> operation) {
         AddModification(operation);
-
         return this;
     }
 

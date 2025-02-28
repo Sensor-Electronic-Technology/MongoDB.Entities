@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using System;
+using MongoDB.Driver;
 
 namespace MongoDB.Entities;
 
@@ -13,7 +14,7 @@ public static partial class DB
     /// <param name="session">An optional session if using within a transaction</param>
     public static Update<T> Update<T>(IClientSessionHandle? session = null) where T : IEntity
         => new(session, null, null);
-
+    
     /// <summary>
     /// Update and retrieve the first document that was updated.
     /// <para>TIP: Specify a filter first with the .Match(). Then set property values with .Modify() and finally call .Execute() to run the command.</para>

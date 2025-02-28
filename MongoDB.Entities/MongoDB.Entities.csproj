@@ -4,24 +4,24 @@
 
         <Version>24.1.1</Version>
 
-        <TargetFramework>netstandard2.1</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <RootNamespace>MongoDB.Entities</RootNamespace>
         <AssemblyName>MongoDB.Entities</AssemblyName>
-        <Authors>Đĵ ΝιΓΞΗΛψΚ</Authors>
-        <Description>A data access library for MongoDB with an elegant api, LINQ support and built-in entity relationship management.</Description>
-        <PackageProjectUrl>https://mongodb-entities.com</PackageProjectUrl>
-        <Copyright>Đĵ ΝιΓΞΗΛψΚ</Copyright>
-        <PackageId>MongoDB.Entities</PackageId>
-        <Product>MongoDB.Entities</Product>
-        <RepositoryUrl>https://github.com/dj-nitehawk/MongoDB.Entities.git</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
-        <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageIcon>icon.png</PackageIcon>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <!--       <Authors>Đĵ ΝιΓΞΗΛψΚ</Authors>
+               <Description>A data access library for MongoDB with an elegant api, LINQ support and built-in entity relationship management.</Description>
+               <PackageProjectUrl>https://mongodb-entities.com</PackageProjectUrl>
+               <Copyright>Đĵ ΝιΓΞΗΛψΚ</Copyright>
+               <PackageId>MongoDB.Entities</PackageId>
+               <Product>MongoDB.Entities</Product>
+               <RepositoryUrl>https://github.com/dj-nitehawk/MongoDB.Entities.git</RepositoryUrl>
+               <RepositoryType>git</RepositoryType>
+               <PublishRepositoryUrl>true</PublishRepositoryUrl>
+               <PackageLicenseExpression>MIT</PackageLicenseExpression>
+               <PackageIcon>icon.png</PackageIcon>
+               <PackageReadmeFile>README.md</PackageReadmeFile>-->
         <PackageTags>mongodb mongodb-orm mongodb-repo mongodb-repository entities nosql orm linq netcore repository aspnetcore dotnetstandard database persistance dal repo</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <LangVersion>latest</LangVersion>
+        <LangVersion>14.0</LangVersion>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>

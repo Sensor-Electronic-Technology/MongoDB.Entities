@@ -13,6 +13,10 @@ public abstract class Entity : IEntity
     /// </summary>
     [BsonId, AsObjectId]
     public string ID { get; set; } = null!;
+    
+    public DocumentVersion Version { get; set; }
+    
+    public BsonDocument? AdditionalData { get; set; }
 
     /// <summary>
     /// Override this method in order to control the generation of IDs for new entities.

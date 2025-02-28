@@ -20,6 +20,7 @@ public static partial class DB
     {
         BsonSerializer.RegisterSerializer(new DateSerializer());
         BsonSerializer.RegisterSerializer(new FuzzyStringSerializer());
+        BsonSerializer.RegisterSerializer(new DocumentVersionSerializer());
         BsonSerializer.RegisterSerializer(typeof(decimal), new DecimalSerializer(BsonType.Decimal128));
         BsonSerializer.RegisterSerializer(typeof(decimal?), new NullableSerializer<decimal>(new DecimalSerializer(BsonType.Decimal128)));
 
