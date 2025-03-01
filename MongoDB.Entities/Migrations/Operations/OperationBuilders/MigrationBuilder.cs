@@ -13,7 +13,7 @@ public class MigrationBuilder {
             IsDestructive = false
         };
         Operations.Add(operation);
-        return new OperationBuilder<AddFieldOperation>(operation);
+        return new(operation);
     }
 
     public virtual OperationBuilder<DropFieldOperation> DropField(string collectionName, string propertyName, Field field) {

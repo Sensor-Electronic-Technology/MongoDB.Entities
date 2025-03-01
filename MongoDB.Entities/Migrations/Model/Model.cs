@@ -1,7 +1,10 @@
-﻿namespace MongoDB.Entities;
+﻿using System.Collections.Generic;
 
-public class Model {
-    
+namespace MongoDB.Entities;
+
+public class Model:Entity {
+    public List<Field> Fields { get; set; }
+    public string CollectionName { get; set; }
 }
 
 

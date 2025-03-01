@@ -3,8 +3,8 @@
 namespace MongoDB.Entities;
 
 //MAX([A])  AVG([Tma1Temp])
-/*[BsonDiscriminator(RootClass = true)]
-[BsonKnownTypes(typeof(ReferenceVariable), typeof(ReferenceSubVariable), typeof(ReferenceSubCollectionVariable))]*/
+[BsonDiscriminator(RootClass = true),
+ BsonKnownTypes(typeof(ReferenceVariable), typeof(ReferenceSubVariable), typeof(ReferenceSubVariable))]
 public abstract class Variable {
     public string VariableName { get; set; } = string.Empty;
 }
@@ -25,7 +25,3 @@ public class ReferenceSubVariable:ReferenceVariable{
     public bool IsCollection { get; set; }
     public string? QueryExpression { get; set; }
 }
-
-/*public class ReferenceSubCollectionVariable:ReferenceSubVariable{
-    public string? CollectionFilter { get; set; }
-}*/

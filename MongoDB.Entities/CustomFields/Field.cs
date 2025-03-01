@@ -26,11 +26,11 @@ public class ValueField : Field {
 }
 
 public class SelectionField : Field {
-    public List<object>? AvailableValues { get; set; }
+    public Dictionary<string,object> SelectionDictionary { get; set; } = new Dictionary<string,object>();
     public object? DefaultValue { get; set; }
 }
 
-public class CalculatedField : ValueField {
+public class CalculatedField:ValueField  {
     public string Formula { get; set; } = string.Empty;
-    public List<Variable>? Variables { get; set; }
+    public List<Variable> Variables { get; set; } = [];
 }
