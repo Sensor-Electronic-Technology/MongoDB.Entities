@@ -31,6 +31,7 @@ public class SelectionField : Field {
 }
 
 public class CalculatedField:ValueField  {
-    public string Formula { get; set; } = string.Empty;
+    public string Expression { get; set; } = string.Empty;
+    public ReturnType ReturnType { get; set; }
     public List<Variable> Variables { get; set; } = [];
 }

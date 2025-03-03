@@ -5,6 +5,7 @@ using MongoDB.Entities;
 
 namespace MongoDB.Entities;
 
+[Collection("_document_migrations_")]
 public class DocumentMigration : Entity,IDocumentMigration {
     public DateTime CreatedOn { get; set; }
     public DateTime MigratedOn { get; set; }

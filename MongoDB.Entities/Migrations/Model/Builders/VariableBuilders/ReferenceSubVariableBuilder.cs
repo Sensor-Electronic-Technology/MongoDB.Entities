@@ -4,7 +4,7 @@ public class ReferenceSubVariableBuilder:IRefSubVariableBuilder {
     public ReferenceSubVariable Variable { get; }
 
     public IRefSubVariableBuilder WithReferenceSubProperty(string propertyName) {
-        this.Variable.ReferenceSubProperty = propertyName;
+        this.Variable.SubProperty = propertyName;
         return this;
     }
 

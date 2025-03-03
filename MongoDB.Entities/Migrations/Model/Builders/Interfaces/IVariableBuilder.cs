@@ -5,7 +5,7 @@ public interface IVariableBuilder:IBuilder {
 }
 
 public interface IValueVariableBuilder:IVariableBuilder {
-    public ValueVariable Variable { get; }
+    public NumberVariable Variable { get; }
     public IValueVariableBuilder HasName(string name);
     public IValueVariableBuilder HasValue(double value);
 }
