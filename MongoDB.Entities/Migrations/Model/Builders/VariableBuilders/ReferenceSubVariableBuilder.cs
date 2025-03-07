@@ -1,15 +1,15 @@
 ﻿namespace MongoDB.Entities;
 
-public class ReferenceSubVariableBuilder:IRefSubVariableBuilder {
-    public ReferenceSubVariable Variable { get; }
+/*public class ReferenceSubVariableBuilder:IRefSubVariableBuilder {
+    public ChildReferenceVariable Variable { get; }
 
     public IRefSubVariableBuilder WithReferenceSubProperty(string propertyName) {
-        this.Variable.SubProperty = propertyName;
+        this.Variable.ChildProperty = propertyName;
         return this;
     }
 
     public IRefSubVariableBuilder IsCollection(bool isCollection) {
-        this.Variable.IsCollection = isCollection;
+        //this.Variable.IsCollection = isCollection;
         return this;
     }
 
@@ -24,12 +24,12 @@ public class ReferenceSubVariableBuilder:IRefSubVariableBuilder {
     }
 
     public IRefSubVariableBuilder ReferenceCollection(string collectionName) {
-        this.Variable.ReferenceCollection = collectionName;
+        //this.Variable.ReferenceType = collectionName;
         return this;
     }
 
     public IRefSubVariableBuilder WithReferenceProperty(string propertyName) {
-        this.Variable.ReferenceProperty = propertyName;
+        this.Variable.PropertyName = propertyName;
         return this;
     }
-}
+}*/

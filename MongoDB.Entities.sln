@@ -18,6 +18,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{4E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleTesting", "ConsoleTesting\ConsoleTesting.csproj", "{62A1A6D4-1A14-4140-B738-48E016929653}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NCalcExtensions", "NCalcExtensions\NCalcExtensions.csproj", "{993D1B85-5443-4531-A069-3CB8999E1D57}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions", "Extensions\Extensions.csproj", "{5B70F83C-04BC-45ED-AD57-DBE6E464F900}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +44,14 @@ Global
 		{62A1A6D4-1A14-4140-B738-48E016929653}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62A1A6D4-1A14-4140-B738-48E016929653}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62A1A6D4-1A14-4140-B738-48E016929653}.Release|Any CPU.Build.0 = Release|Any CPU
+		{993D1B85-5443-4531-A069-3CB8999E1D57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{993D1B85-5443-4531-A069-3CB8999E1D57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{993D1B85-5443-4531-A069-3CB8999E1D57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{993D1B85-5443-4531-A069-3CB8999E1D57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B70F83C-04BC-45ED-AD57-DBE6E464F900}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B70F83C-04BC-45ED-AD57-DBE6E464F900}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B70F83C-04BC-45ED-AD57-DBE6E464F900}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B70F83C-04BC-45ED-AD57-DBE6E464F900}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

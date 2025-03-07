@@ -1,6 +1,6 @@
 ﻿namespace MongoDB.Entities;
 
-public class ValueVariableBuilder:IValueVariableBuilder {
+/*public class ValueVariableBuilder:IValueVariableBuilder {
     public NumberVariable Variable { get; }
 
     public IValueVariableBuilder HasName(string name) {
@@ -12,4 +12,4 @@ public class ValueVariableBuilder:IValueVariableBuilder {
         this.Variable.Value = value;
         return this;
     }
-}
+}*/

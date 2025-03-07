@@ -4,7 +4,7 @@ public interface IVariableBuilder:IBuilder {
     
 }
 
-public interface IValueVariableBuilder:IVariableBuilder {
+/*public interface IValueVariableBuilder:IVariableBuilder {
     public NumberVariable Variable { get; }
     public IValueVariableBuilder HasName(string name);
     public IValueVariableBuilder HasValue(double value);
@@ -18,11 +18,11 @@ public interface IRefVariableBuilder : IVariableBuilder {
 }
 
 public interface IRefSubVariableBuilder : IVariableBuilder {
-    public ReferenceSubVariable Variable { get; }
+    //public ChildReferenceVariable Variable { get; }
     public IRefSubVariableBuilder HasName(string name);
     public IRefSubVariableBuilder ReferenceCollection(string collectionName);
     public IRefSubVariableBuilder WithReferenceProperty(string propertyName);
     public IRefSubVariableBuilder WithReferenceSubProperty(string propertyName);
     public IRefSubVariableBuilder IsCollection(bool isCollection);
     public IRefSubVariableBuilder WithQueryExpression(string queryExpression);
-}
+}*/

@@ -1,6 +1,6 @@
 ﻿namespace MongoDB.Entities;
 
-public class ReferenceVariableBuilder:IRefVariableBuilder {
+/*public class ReferenceVariableBuilder:IRefVariableBuilder {
     public ReferenceVariable Variable { get; }
 
     public IRefVariableBuilder HasName(string name) {
@@ -9,12 +9,12 @@ public class ReferenceVariableBuilder:IRefVariableBuilder {
     }
 
     public IRefVariableBuilder ReferenceCollection(string collectionName) {
-        this.Variable.ReferenceCollection = collectionName;
+        //this.Variable.ReferenceType = collectionName;
         return this;
     }
 
     public IRefVariableBuilder WithReferenceProperty(string propertyName) {
-        this.Variable.ReferenceProperty = propertyName;
+        this.Variable.PropertyName = propertyName;
         return this;
     }
-}
+}*/

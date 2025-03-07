@@ -8,14 +8,14 @@ namespace MongoDB.Entities;
 
 [BsonDiscriminator(RootClass = true),
  BsonKnownTypes(typeof(ObjectField), typeof(ValueField), typeof(SelectionField), typeof(CalculatedField))]
-public class Field {
+public class Field:Entity {
     public string FieldName { get; set; } = string.Empty;
     public BsonType BsonType { get; set; }
     public TypeCode TypeCode { get; set; }
+    public One<TypeConfiguration> TypeConfiguration { get; set; }
 }
 
 public class ObjectField : Field {
-   // public string? PropertyName { get; set; }
    public List<Field> Fields { get; set; } = [];
 }
 
@@ -32,6 +32,5 @@ public class SelectionField : Field {
 
 public class CalculatedField:ValueField  {
     public string Expression { get; set; } = string.Empty;
-    public ReturnType ReturnType { get; set; }
     public List<Variable> Variables { get; set; } = [];
 }

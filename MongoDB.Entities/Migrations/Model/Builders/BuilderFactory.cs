@@ -3,7 +3,7 @@
 namespace MongoDB.Entities;
 
 public static class BuilderFactory {
-    public static TBuilder GetBuilder<TBuilder>() where TBuilder:IBuilder {
+    /*public static TBuilder GetBuilder<TBuilder>() where TBuilder:IBuilder {
         return typeof(TBuilder) switch {
             { } t when t == typeof(IObjectFieldBuilder) => (TBuilder)(new ObjectFieldBuilder() as IFieldBuilder),
             { } t when t == typeof(IValueFieldBuilder) => (TBuilder)(new ValueFieldBuilder() as IFieldBuilder),
@@ -13,7 +13,7 @@ public static class BuilderFactory {
             { } t when t == typeof(IRefVariableBuilder) => (TBuilder)(new ReferenceVariableBuilder() as IVariableBuilder),
             { } t when t == typeof(IRefSubVariableBuilder) => (TBuilder)(new ReferenceSubVariableBuilder() as IVariableBuilder),
             _ => throw new NotSupportedException($"Builder for type {typeof(TBuilder).Name} is not supported.") };
-    }
+    }*/
     
     public static IFieldBuilder GetFieldBuilderByType<TField>() where TField:Field {
         return typeof(TField) switch {
