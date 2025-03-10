@@ -13,9 +13,7 @@ public interface IMigration
 
 public interface IDocumentMigration {
     public DocumentVersion Version { get; set; }
-    /*public string CollectionName { get; set; }
-    public string PropertyName { get; set; }*/
-    List<IMigrationOperation> UpOperations { get; set; }
-    List<IMigrationOperation> DownOperations { get; set; }
+    public List<IMigrationOperation> UpOperations { get; set; }
+    public List<IMigrationOperation> DownOperations { get; set; }
     void Build(MigrationBuilder builder);
 }

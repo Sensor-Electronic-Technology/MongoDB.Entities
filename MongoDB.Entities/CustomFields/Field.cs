@@ -8,11 +8,12 @@ namespace MongoDB.Entities;
 
 [BsonDiscriminator(RootClass = true),
  BsonKnownTypes(typeof(ObjectField), typeof(ValueField), typeof(SelectionField), typeof(CalculatedField))]
-public class Field:Entity {
+public class Field {
     public string FieldName { get; set; } = string.Empty;
     public BsonType BsonType { get; set; }
     public TypeCode TypeCode { get; set; }
-    public One<TypeConfiguration> TypeConfiguration { get; set; }
+    /*public One<TypeConfiguration> TypeConfiguration { get; set; } = null!;
+    public One<ObjectField>? ObjectField { get; set; }*/
 }
 
 public class ObjectField : Field {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace MongoDB.Entities;
@@ -20,6 +21,9 @@ public static partial class DB
     public static IMongoCollection<T> Collection<T>() where T : IEntity
         => Cache<T>.Collection;
 
+    public static IMongoCollection<BsonDocument> Collection(string db,string collectName) 
+        => Database(db).GetCollection<BsonDocument>(collectName);
+    
     /// <summary>
     /// Gets the collection name for a given entity type
     /// </summary>

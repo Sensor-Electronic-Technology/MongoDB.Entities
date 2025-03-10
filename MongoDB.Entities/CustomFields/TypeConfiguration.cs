@@ -9,26 +9,27 @@ namespace MongoDB.Entities;
     public List<Field>? Fields { get; set; }
 }*/
 
-public class TypeConfigurationMap:Entity {
-    public string Type { get; set; } = null!;
+/*public class TypeConfigurationMap:Entity {
+    public string CollectionName { get; set; } = null!;
     public Many<TypeConfiguration,TypeConfigurationMap> TypeConfigurations { get; set; }
 
     public TypeConfigurationMap() {
         this.InitOneToMany(() => this.TypeConfigurations);
     }
-}
+}*/
 
 public class TypeConfiguration:Entity {
-    public string Type { get; set; } = null!;
-    public One<TypeConfigurationMap> TypeConfigMap { get; set; }
-    public Many<Field,TypeConfiguration> Fields { get; set; }
+    public string CollectionName { get; set; } = null!;
+    public string DatabaseName { get; set; } = null!;
+    public IList<Field> Fields { get; set; } = [];
+    public Many<DocumentMigration,TypeConfiguration> Migrations { get; set; }
     public TypeConfiguration() {
-        this.InitOneToMany(() => Fields);
+        this.InitOneToMany(() => Migrations);
     }
 }
 
 public class ChildTypeConfiguration : TypeConfiguration {
-    public string ChildCollectionProperty { get; set; } = null!;
+    public string ChildProperty { get; set; } = null!;
 }
 
 

@@ -21,7 +21,7 @@ public class PropertyVariable : Variable {
 }
 
 public class ReferencePropertyVariable:PropertyVariable {
-    public string TypeName { get; set; } = null!;
+    public string CollectionName { get; set; } = null!;
     public string QueryExpression { get; set; } = null!;
     public object? QueryCondition { get; set; }
 }

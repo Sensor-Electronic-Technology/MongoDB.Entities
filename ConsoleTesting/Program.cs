@@ -124,18 +124,18 @@ Console.WriteLine($"Eval Find: {((EpiRun)result.ReturnValue).Name}");*/
 //var run=engine.Evaluate("DB.Entity<EpiRun>().Fluent().Match(e=>e.Name.Contains(\"W001\")).FirstOrDefault()");
 
 void TestNCalc() {
-    var expression = new ExtendedExpression("1+2");
-    
+    var expression = new ExtendedExpression("median([powers])");
+    expression.Parameters.Add("powers", new Collection<double>() { 1.0, 2.0, 3.0, 4.0, 5.0 });
     Console.WriteLine(expression.Evaluate());
 }
 
 async Task CreateTypeConfiguration() {
-    TypeConfigurationMap configMap = new TypeConfigurationMap() {
-        Type = nameof(QuickTest),
-    };
+    /*TypeConfigurationMap configMap = new TypeConfigurationMap() {
+        CollectionName = DB.CollectionName<QuickTest>(),
+    };*/
 
     TypeConfiguration config = new TypeConfiguration() {
-        Type = nameof(QuickTest),
+        CollectionName = DB.CollectionName<QuickTest>(),
     };
     
     ObjectField objField = new ObjectField() {
@@ -147,7 +147,7 @@ async Task CreateTypeConfiguration() {
                 FieldName="Avg. Initial Power",
                 BsonType = BsonType.Double,
                 DefaultValue = 0.00,
-                Expression = "Average()",
+                Expression = "avg([powers])",
                 Variables = [
                     new CollectionVariable() {
                         Property = "Power",
@@ -161,7 +161,7 @@ async Task CreateTypeConfiguration() {
                 FieldName = "Avg. Wl",
                 BsonType = BsonType.Double,
                 DefaultValue = 0.00,
-                Expression = "[wavelengths].Average()",
+                Expression = "avg([wavelengths])",
                 Variables = [
                     new CollectionVariable() {
                         Property = "Wavelengths",
@@ -174,37 +174,25 @@ async Task CreateTypeConfiguration() {
         ]
     };
     
+    foreach(var field in objField.Fields) {
+        if (field is ObjectField oField) {
+            
+        }else if (field is CalculatedField cField) {
 
-    var pField=(CalculatedField)objField.Fields[0];
-
-    foreach (var field in objField.Fields) {
-        if (field is CalculatedField calcField) {
-            foreach (var variable in calcField.Variables) { 
-                
-            }
+        }else if (field is ValueField vField) {
             
-            
-            
-        }else if (field is ValueField valueField) {
-            
-        }else if (field is SelectionField selectField) {
-            
-        }else if(field is ObjectField oField) {
+        }else if (field is SelectionField sField) {
             
         }
     }
     
     
-    
 
-    
-    
-    var script = CSharpScript.Create<double>($"QueryObject.{((CollectionVariable)pField.Variables[0]).CollectionProperty}.Select(e => e.{((CollectionVariable)pField.Variables[0]).Property}).Average();",
+    /*var script = CSharpScript.Create<double>($"QueryObject.{((CollectionVariable)pField.Variables[0]).CollectionProperty}.Select(e => e.{((CollectionVariable)pField.Variables[0]).Property}).Average();",
         globalsType:typeof(ScriptInput<QuickTest>),
         options:ScriptOptions.Default
                              .WithReferences(typeof(DB).Assembly, typeof(EpiRun).Assembly, typeof(Monitoring).Assembly)
                              .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq"));
-
     script.Compile();
     var cursor = await DB.Fluent<QuickTest>().ToCursorAsync();
 
@@ -214,7 +202,7 @@ async Task CreateTypeConfiguration() {
             //var avg=(await script.RunAsync(new ScriptInput<QuickTest>(){QueryObject =qt})).ReturnValue;
             Console.WriteLine($"{qt.WaferId} Initial Power Avg: {avg}");
         }
-    }
+    }*/
     /*var quickTests = await DB.Entity<EpiRun>().QuickTests.ChildrenFluent().ToListAsync();
 
     foreach (var quickTest in quickTests) {
@@ -232,6 +220,10 @@ async Task CreateTypeConfiguration() {
                              .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq","System.Linq.Dynamic.Core","System.Linq.Dynamic"));*/
 }
 
+void TestMigrationBuilder() {
+    MigrationBuilder builder = new MigrationBuilder();
+    builder.AddField("", "", new Field());
+}
 
 async Task GenerateEpiData() {
     var rand = new Random();

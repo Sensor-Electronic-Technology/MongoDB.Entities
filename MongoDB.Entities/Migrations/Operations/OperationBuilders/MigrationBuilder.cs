@@ -7,8 +7,8 @@ public class MigrationBuilder {
     public virtual OperationBuilder<AddFieldOperation> AddField(
         string collectionName, string propertyName, Field field) {
         var operation = new AddFieldOperation {
-            CollectionName = collectionName,
-            PropertyName = propertyName,
+            /*CollectionName = collectionName,
+            PropertyName = propertyName,*/
             Field = field,
             IsDestructive = false
         };
@@ -18,8 +18,8 @@ public class MigrationBuilder {
 
     public virtual OperationBuilder<DropFieldOperation> DropField(string collectionName, string propertyName, Field field) {
         var operation = new DropFieldOperation {
-            CollectionName = collectionName,
-            PropertyName = propertyName,
+            /*CollectionName = collectionName,
+            PropertyName = propertyName,*/
             Field = field,
             IsDestructive = true
         };
@@ -29,12 +29,12 @@ public class MigrationBuilder {
     
     public virtual OperationBuilder<AlterFieldOperation> AlterField(string collectionName, string propertyName, Field field, Field oldField) {
         var operation = new AlterFieldOperation {
-            CollectionName = collectionName,
-            PropertyName = propertyName,
+            /*CollectionName = collectionName,
+            PropertyName = propertyName,*/
             Field = field,
             OldField = new AddFieldOperation() {
-                CollectionName = collectionName,
-                PropertyName = propertyName,
+                /*CollectionName = collectionName,
+                PropertyName = propertyName,*/
                 Field = oldField,
                 IsDestructive = false
             },

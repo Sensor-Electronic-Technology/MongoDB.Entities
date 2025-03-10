@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
@@ -14,20 +15,19 @@ namespace MongoDB.Entities;
 /// <summary>
 /// The main entrypoint for all data access methods of the library
 /// </summary>
-public static partial class DB
-{
-    static DB()
-    {
+public static partial class DB {
+    static DB() {
         BsonSerializer.RegisterSerializer(new DateSerializer());
         BsonSerializer.RegisterSerializer(new FuzzyStringSerializer());
         BsonSerializer.RegisterSerializer(new DocumentVersionSerializer());
         BsonSerializer.RegisterSerializer(typeof(decimal), new DecimalSerializer(BsonType.Decimal128));
-        BsonSerializer.RegisterSerializer(typeof(decimal?), new NullableSerializer<decimal>(new DecimalSerializer(BsonType.Decimal128)));
+        BsonSerializer.RegisterSerializer(
+            typeof(decimal?),
+            new NullableSerializer<decimal>(new DecimalSerializer(BsonType.Decimal128)));
 
         ConventionRegistry.Register(
             "DefaultConventions",
-            new ConventionPack
-            {
+            new ConventionPack {
                 new IgnoreExtraElementsConvention(true),
                 new IgnoreManyPropsConvention()
             },
@@ -35,6 +35,8 @@ public static partial class DB
     }
 
     internal static event Action? DefaultDbChanged;
+    internal static ILoggerFactory LoggerFactory { get; set; }
+    internal static ILogger CreateLogger => LoggerFactory.CreateLogger("DB");
 
     static readonly ConcurrentDictionary<string, IMongoDatabase> _dbs = new();
     static IMongoDatabase? _defaultDb;
@@ -62,16 +64,14 @@ public static partial class DB
     public static Task InitAsync(string database, MongoClientSettings settings)
         => Initialize(settings, database);
 
-    internal static async Task Initialize(MongoClientSettings settings, string dbName, bool skipNetworkPing = false)
-    {
+    internal static async Task Initialize(MongoClientSettings settings, string dbName, bool skipNetworkPing = false) {
         if (string.IsNullOrEmpty(dbName))
             throw new ArgumentNullException(nameof(dbName), "Database name cannot be empty!");
 
         if (_dbs.ContainsKey(dbName))
             return;
 
-        try
-        {
+        try {
             var db = new MongoClient(settings).GetDatabase(dbName);
 
             if (_dbs.Count == 0)
@@ -79,9 +79,7 @@ public static partial class DB
 
             if (_dbs.TryAdd(dbName, db) && !skipNetworkPing)
                 await db.RunCommandAsync((Command<BsonDocument>)"{ping:1}").ConfigureAwait(false);
-        }
-        catch (Exception)
-        {
+        } catch (Exception) {
             _dbs.TryRemove(dbName, out _);
 
             throw;
@@ -101,7 +99,8 @@ public static partial class DB
     /// </summary>
     /// <param name="settings">A MongoClientSettings object</param>
     public static async Task<IEnumerable<string>> AllDatabaseNamesAsync(MongoClientSettings settings)
-        => await (await new MongoClient(settings).ListDatabaseNamesAsync().ConfigureAwait(false)).ToListAsync().ConfigureAwait(false);
+        => await (await new MongoClient(settings).ListDatabaseNamesAsync().ConfigureAwait(false)).ToListAsync()
+               .ConfigureAwait(false);
 
     /// <summary>
     /// Specifies the database that a given entity type should be stored in.
@@ -124,14 +123,13 @@ public static partial class DB
     /// You can also get the default database by passing 'default' or 'null' for the name parameter.
     /// </summary>
     /// <param name="name">The name of the database to retrieve</param>
-    public static IMongoDatabase Database(string? name)
-    {
+    public static IMongoDatabase Database(string? name) {
         IMongoDatabase? db = null;
 
-        if (_dbs.Count == 0)
-        {
+        if (_dbs.Count == 0) {
             return db ??
-                   throw new InvalidOperationException($"Database connection is not initialized for [{(string.IsNullOrEmpty(name) ? "Default" : name)}]");
+                   throw new InvalidOperationException(
+                       $"Database connection is not initialized for [{(string.IsNullOrEmpty(name) ? "Default" : name)}]");
         }
 
         if (string.IsNullOrEmpty(name))
@@ -140,7 +138,8 @@ public static partial class DB
             _dbs.TryGetValue(name, out db);
 
         return db ??
-               throw new InvalidOperationException($"Database connection is not initialized for [{(string.IsNullOrEmpty(name) ? "Default" : name)}]");
+               throw new InvalidOperationException(
+                   $"Database connection is not initialized for [{(string.IsNullOrEmpty(name) ? "Default" : name)}]");
     }
 
     /// <summary>
@@ -156,8 +155,7 @@ public static partial class DB
     /// <para>TIP: Make sure to cancel any watchers (change-streams) before switching the default database.</para>
     /// </summary>
     /// <param name="name">The name of the database to mark as the new default database</param>
-    public static void ChangeDefaultDatabase(string name)
-    {
+    public static void ChangeDefaultDatabase(string name) {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentNullException(nameof(name), "Database name cannot be null or empty");
 
@@ -199,8 +197,7 @@ public static partial class DB
     /// </summary>
     /// <typeparam name="T">Any class that implements IEntity</typeparam>
     /// <param name="ID">The ID to set on the returned instance</param>
-    public static T Entity<T>(object ID) where T : IEntity, new()
-    {
+    public static T Entity<T>(object ID) where T : IEntity, new() {
         var newT = new T();
         newT.SetId(ID);
 
