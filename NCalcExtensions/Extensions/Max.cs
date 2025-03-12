@@ -31,7 +31,8 @@ internal static class Max
 			return;
 		}
 
-		var originalList = originalListUntyped as IEnumerable ?? throw new FormatException($"First {ExtensionFunction.Max} parameter must be an IEnumerable.");
+		var originalList = originalListUntyped as IEnumerable 
+                           ?? throw new FormatException($"First {ExtensionFunction.Max} parameter must be an IEnumerable.");
 
 		if (functionArgs.Parameters.Length == 1)
 		{

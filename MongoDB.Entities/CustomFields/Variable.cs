@@ -6,38 +6,54 @@ namespace MongoDB.Entities;
 
 
 [BsonDiscriminator(RootClass = true), 
- BsonKnownTypes(
-     typeof(ValueVariable),
-     typeof(CollectionVariable),
-     typeof(PropertyVariable),
-     typeof(ReferencePropertyVariable))]
+ BsonKnownTypes(typeof(ValueVariable), typeof(CollectionVariable), typeof(PropertyVariable),typeof(ReferencePropertyVariable))]
 
 public class Variable {
     public string VariableName { get; set; } = null!;
     public ValueType ValueType { get; set; }
 }
+/// <summary>
+/// Property from the owning entity
+/// </summary>
 public class PropertyVariable : Variable {
     public string PropertyName { get; set; } = null!;
 }
+/// <summary>
+/// Property from a reference collection
+/// </summary>
 
 public class ReferencePropertyVariable:PropertyVariable {
+    public string DatabaseName { get; set; } = null!;
     public string CollectionName { get; set; } = null!;
-    public string QueryExpression { get; set; } = null!;
-    public object? QueryCondition { get; set; }
+    public Filter? Filter { get; set; }
 }
 
+public class ReferenceCollectionVariable:Variable{
+    public string DatabaseName { get; set; } = null!;
+    public string CollectionName { get; set; } = null!;
+    public Filter? Filter { get; set; }
+    public string Property { get; set; } = null!;
+    public string CollectionProperty { get; set; } = null!;
+    public Filter? SubFilter { get; set; }
+}
+
+/// <summary>
+/// Collection in the owning entity
+/// </summary>
 public class CollectionVariable:Variable {
     public string Property { get; set; } = null!;
     public string CollectionProperty { get; set; } = null!;
-    public string? CollectionFilter { get; set; }
+    public Filter? Filter { get; set; }
 }
 
+/// <summary>
+/// Static value
+/// Could be false, pass, 1, 2.5, etc
+/// </summary>
 public class ValueVariable : Variable {
     public object Value { get; set; } = null!;
     public TypeCode TypeCode { get; set; }
-    //public ValueType ValueType { get; set; }
 }
-
 
 /*public abstract class Variable {
     public string VariableName { get; set; } = string.Empty;

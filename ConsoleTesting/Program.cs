@@ -1,132 +1,187 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using System.Collections.ObjectModel;
-using MongoDB;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Entities;
-
-using IronPython.Hosting;
-using Microsoft.Scripting.Hosting;
-using Z.Expressions;
-using System.Linq.Expressions;
 using System.Linq.Dynamic.Core;
-using System.Text.Json;
-using Community.CsharpSqlite;
 using ConsoleTesting;
-using Jint;
-using MongoDB.Driver.Linq;
-using Microsoft.ClearScript.V8;
-using Microsoft.ClearScript.JavaScript;
-using Microsoft.ClearScript;
-using Microsoft.CodeAnalysis.CSharp.Scripting;
-using Microsoft.CodeAnalysis.Scripting;
-using Microsoft.Scripting.Runtime;
 using NCalcExtensions;
-using Newtonsoft.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
-using NLua;
-using Expression = NCalc.Expression;
+using ValueType = MongoDB.Entities.ValueType;
 
-//await DB.InitAsync("epi_system","172.20.3.41");
+await DB.InitAsync("epi_system","172.20.3.41");
 
 //await GenerateEpiData();
 //await CreateTypeConfiguration();
-TestNCalc();
-
-/*//var engine = new Engine(options => options.AllowClr());
-var evalContext = new EvalContext();
-evalContext.RegisterAssembly(typeof(EpiRun).Assembly, typeof(Monitoring).Assembly, typeof(Monitoring).Assembly);
-evalContext.RegisterUsingDirective("MongoDB.Entities");
-evalContext.RegisterUsingDirective("System.Linq.Dynamic.Core");
-evalContext.RegisterUsingDirective("System.Linq");
-evalContext.RegisterUsingDirective("MongoDB.Driver");
-
-string refType = "Monitoring";
-string query = "Where(e=>e.EpiRun.ID==\"67c6107d81555dcdab57529c\" && e.Weight1>2).Select(e=>e.Weight2).ToList()";
-string id = "67c6107d81555dcdab57529c";
-string param = "Weight1";
-
-
-string linq = @"
-        (from e in DB.Entity<{typeName}>().Queryable()
-        where e.EpiRun.ID == {id} && e.{property} > {value}
-        select e.{property}).ToList()";
-var linqQuery = linq.Replace("{id}", "\"67c6107d81555dcdab57529c\"").
-                    Replace("{param}", param)
-                   .Replace("{value}", 2.ToString()).
-                    Replace("{refType}", refType);
-Console.WriteLine(linqQuery);
-var script = CSharpScript.Create<List<double>>(linqQuery, 
-    ScriptOptions.Default
-                 .WithReferences(typeof(DB).Assembly, typeof(EpiRun).Assembly, typeof(Monitoring).Assembly)
-                 .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq"));*/
+//TestNCalc();
+await TestDynamicScript();
+//await TestBuilderFilter();
 
 
 
-
-/*var json=JsonSerializer.Serialize(result);
-Console.WriteLine(json);*/
-
-
-
-/*Dictionary<string,object> variables = new Dictionary<string, object>(); ;
-
-foreach(var variable in field.Variables) {
-    if(variable is ReferenceVariable referenceVariable) {
-        
-    }else if (variable is ValueVariable) {
-        
-    }else if(variable is ReferenceSubVariable refSubVariable) {
-
-        
-        
-        CSharpScript.Create<object>($"", 
-            ScriptOptions.Default.WithReferences(typeof(DB).Assembly,typeof(EpiRun).Assembly)
-                         .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq","System.Linq.Dynamic.Core"));
-    }
+async Task TestBuilderFilter() {
+    var filter = new Filter() {
+        FieldName = nameof(QtMeasurement.Power),
+        FilterOperator = FilterOperator.LessThanOrEqual,
+        LogicalOperator = LogicalFilterOperator.And,
+        Value = 1300,
+        Filters = new List<Filter>() {
+            new Filter() {
+                FieldName = nameof(QtMeasurement.Power),
+                FilterOperator = FilterOperator.GreaterThan,
+                LogicalOperator = LogicalFilterOperator.And,
+                Value = 100
+            },
+            new Filter() {
+                FieldName = "Wavelength",
+                FilterOperator = FilterOperator.GreaterThanOrEqual,
+                LogicalOperator = LogicalFilterOperator.Or,
+                Value = 275,
+                Filters = new List<Filter>() {
+                    new Filter() {
+                        FieldName = "Wavelength",
+                        FilterOperator = FilterOperator.LessThanOrEqual,
+                        LogicalOperator = LogicalFilterOperator.Or,
+                        Value = 278
+                    }
+                }
+            }
+        }
+    };
+    Console.WriteLine(filter.ToString());
+    /*var cursorAsync = await DB.Entity<QuickTest>().Fluent().ToCursorAsync();
+    while (await cursorAsync.MoveNextAsync()) {
+        foreach (var item in cursorAsync.Current) {
+            var measurements = item.InitialMeasurements.AsQueryable().Where(filter.ToString()).Select(e => e.Power).ToList();
+            if (measurements.Any()) {
+                Console.WriteLine(JsonSerializer.Serialize(measurements));
+            }
+        }
+    }*/
 }
 
-var cursorAsync = await DB.Entity<EpiRun>().Fluent().Match(_ => true).ToCursorAsync();
-
-while(await cursorAsync.MoveNextAsync()) {
-    var runs = cursorAsync.Current;
-    foreach(var run in runs) {
-    
-    }
-}*/
-
-
-
-/*string type="EpiRun";
-string item = "W001";
-
-DB.Entity<EpiRun>().Queryable().Where("e=>e.Name.Contains(\"W001\")").FirstOrDefault();*/
-
-/*var result = await CSharpScript.EvaluateAsync<EpiRun>($"DB.Entity<{type}>().Fluent().Match(e=>e.Name.Contains(\"{item}\")).FirstOrDefault()", 
-                 ScriptOptions.Default.WithReferences(typeof(DB).Assembly,typeof(EpiRun).Assembly).WithImports("MongoDB.Entities","MongoDB.Driver"));
-Console.WriteLine($"Eval Find: {result.Name}");*/
-
-/*var result = await CSharpScript.EvaluateAsync<object>($"DB.Entity<{type}>().Queryable().Where(\"e=>e.Name.Contains(\\\"{item}\\\")\").FirstOrDefault()", 
-                 ScriptOptions.Default.WithReferences(typeof(DB).Assembly,typeof(EpiRun).Assembly)
-                              .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq","System.Linq.Dynamic.Core"));
-Console.WriteLine($"Eval Find: {((EpiRun)result).Name}");*/
-
-/*var script = CSharpScript.Create<object>($"DB.Entity<{type}>().Queryable().Where(\"e=>e.Name.Contains(\\\"{item}\\\")\").FirstOrDefault()", 
-                 ScriptOptions.Default.WithReferences(typeof(DB).Assembly,typeof(EpiRun).Assembly)
-                              .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq","System.Linq.Dynamic.Core"));*/
-/*script.Compile();
-Console.WriteLine(JsonSerializer.Serialize(script, new JsonSerializerOptions() { WriteIndented = true }));*/
-
-/*var result = await script.RunAsync();
-Console.WriteLine($"Eval Find: {((EpiRun)result.ReturnValue).Name}");*/
-
-//var run=engine.Evaluate("DB.Entity<EpiRun>().Fluent().Match(e=>e.Name.Contains(\"W001\")).FirstOrDefault()");
 
 void TestNCalc() {
     var expression = new ExtendedExpression("median([powers])");
     expression.Parameters.Add("powers", new Collection<double>() { 1.0, 2.0, 3.0, 4.0, 5.0 });
     Console.WriteLine(expression.Evaluate());
+}
+
+async Task TestDynamicScript() {
+    ObjectField objField = new ObjectField() {
+        FieldName = "Qt Summary",
+        BsonType = BsonType.Document,
+        TypeCode = TypeCode.Object,
+        Fields=[
+            new CalculatedField() {
+                FieldName="Avg. Initial Power",
+                BsonType = BsonType.Double,
+                DefaultValue = 0.00,
+                Expression = "avg([powers])",
+                Variables = [
+                    new CollectionVariable() {
+                        Property = "Power",
+                        VariableName = "powers",
+                        CollectionProperty = "InitialMeasurements",
+                        Filter=new() {
+                            FieldName = nameof(QtMeasurement.Area),
+                            FilterOperator = FilterOperator.LessThanOrEqual,
+                            LogicalOperator = LogicalFilterOperator.And,
+                            Value = 1100,
+                            Filters = new List<Filter>() {
+                                new() {
+                                    FieldName = nameof(QtMeasurement.Power),
+                                    FilterOperator = FilterOperator.GreaterThan,
+                                    LogicalOperator = LogicalFilterOperator.And,
+                                    Value = 900
+                                },
+                                new() {
+                                    FieldName = "Wavelength",
+                                    FilterOperator = FilterOperator.GreaterThanOrEqual,
+                                    LogicalOperator = LogicalFilterOperator.Or,
+                                    Value = 275,
+                                    Filters = new List<Filter>() {
+                                        new() {
+                                            FieldName = "Wavelength",
+                                            FilterOperator = FilterOperator.LessThanOrEqual,
+                                            LogicalOperator = LogicalFilterOperator.Or,
+                                            Value = 278
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        ValueType = ValueType.NUMBER
+                    }
+                ]
+            },
+            new CalculatedField() {
+                FieldName = "Avg. Wl",
+                BsonType = BsonType.Double,
+                DefaultValue = 0.00,
+                Expression = "avg([wavelengths])",
+                Variables = [
+                    new CollectionVariable() {
+                        Property = "Wavelength",
+                        VariableName = "wavelengths",
+                        CollectionProperty = "Measurements",
+                        
+                    },
+                ]
+            },
+            new CalculatedField() {
+                
+            }
+        ]
+    };
+    var pField=objField.Fields[0] as CalculatedField;
+    /*var script = CSharpScript.Create<double>($"QueryObject.{((CollectionVariable)pField.Variables[0]).CollectionProperty}.Select(e => e.{((CollectionVariable)pField.Variables[0]).Property});",
+    globalsType:typeof(ScriptInput<QuickTest>),
+    options:ScriptOptions.Default
+                         .WithReferences(typeof(DB).Assembly, typeof(EpiRun).Assembly, typeof(Monitoring).Assembly)
+                         .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq"));
+    script.Compile();*/
+    var dataCollect = DB.Collection("epi_system", "quick_tests");
+    var cursor = await dataCollect.Find(_=>true).ToCursorAsync();
+    var collectionVariable = ((CollectionVariable)pField.Variables[0]);
+    var expression = new ExtendedExpression(pField.Expression);
+    while (await cursor.MoveNextAsync()) {
+        foreach(var doc in cursor.Current) {
+            List<object> list = [];
+            if (doc.Contains(collectionVariable.CollectionProperty)) {
+                switch (collectionVariable.ValueType) {
+                    case ValueType.NUMBER: {
+                        //Where($"e=>e.{collectionVariable.Property}>800 && e.{collectionVariable.Property}<1300") .Where(FilterParser.FilterToString(collectionVariable.Filter))
+                        var dList = doc[collectionVariable.CollectionProperty].AsBsonArray.AsQueryable()
+                                                                              .Where(collectionVariable.Filter?.ToString() ?? "")
+                                                                              .Select(e => DateTime.Parse(e[""].AsString));
+                                                                              /*.Select($"e=>e.{collectionVariable.Property}.AsDouble");*/
+                        expression.Parameters[collectionVariable.VariableName] = dList;
+                        if (dList.Any()) {
+                            Console.WriteLine(expression.Evaluate());
+                        }
+                        
+                        break;
+                    }
+
+                    case ValueType.STRING:
+
+                        break;
+                    case ValueType.BOOLEAN:
+
+                        break;
+                    case ValueType.DATE:
+
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+            }
+
+        }
+    }
+
 }
 
 async Task CreateTypeConfiguration() {
@@ -153,7 +208,6 @@ async Task CreateTypeConfiguration() {
                         Property = "Power",
                         VariableName = "powers",
                         CollectionProperty = "InitialMeasurements",
-                        CollectionFilter = string.Empty,
                     }
                 ]
             },
@@ -167,7 +221,6 @@ async Task CreateTypeConfiguration() {
                         Property = "Wavelengths",
                         VariableName = "wavelengths",
                         CollectionProperty = "Measurements",
-                        CollectionFilter = string.Empty
                     },
                 ]
             }
@@ -407,3 +460,107 @@ Console.WriteLine(string.Join(",", list2a2));*/
 /*
 
 */
+
+
+/***
+ * Backup Scratch Work
+ */
+
+
+/*var list=new List<int>(){1,2,3,4,5,6,7,8,9,10};
+var expression=new ExtendedExpression("where([numbers],[prop],[exp])");
+expression.Parameters["numbers"]=list.Select(x=>(object?)x).ToList();
+expression.Parameters["prop"]="e";
+expression.Parameters["exp"]="e>5";
+
+Console.WriteLine(JsonSerializer.Serialize(expression.Evaluate()));*/
+
+
+/*//var engine = new Engine(options => options.AllowClr());
+var evalContext = new EvalContext();
+evalContext.RegisterAssembly(typeof(EpiRun).Assembly, typeof(Monitoring).Assembly, typeof(Monitoring).Assembly);
+evalContext.RegisterUsingDirective("MongoDB.Entities");
+evalContext.RegisterUsingDirective("System.Linq.Dynamic.Core");
+evalContext.RegisterUsingDirective("System.Linq");
+evalContext.RegisterUsingDirective("MongoDB.Driver");
+
+string refType = "Monitoring";
+string query = "Where(e=>e.EpiRun.ID==\"67c6107d81555dcdab57529c\" && e.Weight1>2).Select(e=>e.Weight2).ToList()";
+string id = "67c6107d81555dcdab57529c";
+string param = "Weight1";
+
+
+string linq = @"
+        (from e in DB.Entity<{typeName}>().Queryable()
+        where e.EpiRun.ID == {id} && e.{property} > {value}
+        select e.{property}).ToList()";
+var linqQuery = linq.Replace("{id}", "\"67c6107d81555dcdab57529c\"").
+                    Replace("{param}", param)
+                   .Replace("{value}", 2.ToString()).
+                    Replace("{refType}", refType);
+Console.WriteLine(linqQuery);
+var script = CSharpScript.Create<List<double>>(linqQuery, 
+    ScriptOptions.Default
+                 .WithReferences(typeof(DB).Assembly, typeof(EpiRun).Assembly, typeof(Monitoring).Assembly)
+                 .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq"));*/
+
+
+
+
+/*var json=JsonSerializer.Serialize(result);
+Console.WriteLine(json);*/
+
+
+
+/*Dictionary<string,object> variables = new Dictionary<string, object>(); ;
+
+foreach(var variable in field.Variables) {
+    if(variable is ReferenceVariable referenceVariable) {
+        
+    }else if (variable is ValueVariable) {
+        
+    }else if(variable is ReferenceSubVariable refSubVariable) {
+
+        
+        
+        CSharpScript.Create<object>($"", 
+            ScriptOptions.Default.WithReferences(typeof(DB).Assembly,typeof(EpiRun).Assembly)
+                         .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq","System.Linq.Dynamic.Core"));
+    }
+}
+
+var cursorAsync = await DB.Entity<EpiRun>().Fluent().Match(_ => true).ToCursorAsync();
+
+while(await cursorAsync.MoveNextAsync()) {
+    var runs = cursorAsync.Current;
+    foreach(var run in runs) {
+    
+    }
+}*/
+
+
+
+/*string type="EpiRun";
+string item = "W001";
+
+DB.Entity<EpiRun>().Queryable().Where("e=>e.Name.Contains(\"W001\")").FirstOrDefault();*/
+
+/*var result = await CSharpScript.EvaluateAsync<EpiRun>($"DB.Entity<{type}>().Fluent().Match(e=>e.Name.Contains(\"{item}\")).FirstOrDefault()", 
+                 ScriptOptions.Default.WithReferences(typeof(DB).Assembly,typeof(EpiRun).Assembly).WithImports("MongoDB.Entities","MongoDB.Driver"));
+Console.WriteLine($"Eval Find: {result.Name}");*/
+
+/*var result = await CSharpScript.EvaluateAsync<object>($"DB.Entity<{type}>().Queryable().Where(\"e=>e.Name.Contains(\\\"{item}\\\")\").FirstOrDefault()", 
+                 ScriptOptions.Default.WithReferences(typeof(DB).Assembly,typeof(EpiRun).Assembly)
+                              .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq","System.Linq.Dynamic.Core"));
+Console.WriteLine($"Eval Find: {((EpiRun)result).Name}");*/
+
+/*var script = CSharpScript.Create<object>($"DB.Entity<{type}>().Queryable().Where(\"e=>e.Name.Contains(\\\"{item}\\\")\").FirstOrDefault()", 
+                 ScriptOptions.Default.WithReferences(typeof(DB).Assembly,typeof(EpiRun).Assembly)
+                              .WithImports("MongoDB.Entities","MongoDB.Driver", "System.Linq","System.Linq.Dynamic.Core"));*/
+/*script.Compile();
+Console.WriteLine(JsonSerializer.Serialize(script, new JsonSerializerOptions() { WriteIndented = true }));*/
+
+/*var result = await script.RunAsync();
+Console.WriteLine($"Eval Find: {((EpiRun)result.ReturnValue).Name}");*/
+
+//var run=engine.Evaluate("DB.Entity<EpiRun>().Fluent().Match(e=>e.Name.Contains(\"W001\")).FirstOrDefault()");
