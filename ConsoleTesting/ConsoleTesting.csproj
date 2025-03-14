@@ -12,16 +12,10 @@
       <ProjectReference Include="..\NCalcExtensions\NCalcExtensions.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="EmbeddedScripts.JS.ClearScriptV8" Version="1.0.2" />
-        <PackageReference Include="JavaScriptEngineSwitcher.Jint" Version="3.28.0" />
-        <PackageReference Include="JavaScriptEngineSwitcher.V8.Native.win-x64" Version="3.24.2" />
-        <PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
-        <PackageReference Include="Microsoft.ClearScript" Version="7.4.5" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.13.0" />
         <PackageReference Include="Z.Expressions.Eval" Version="6.2.7" />
         <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.0.2" />
-        <PackageReference Include="IronPython" Version="3.4.0" />
-        <PackageReference Include="NLua" Version="1.7.4" />
+        <PackageReference Include="FastCloner" Version="3.3.2" />
     </ItemGroup>
 
 </Project>

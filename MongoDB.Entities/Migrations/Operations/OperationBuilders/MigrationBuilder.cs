@@ -1,14 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 namespace MongoDB.Entities;
 
 public class MigrationBuilder {
-    public virtual List<IMigrationOperation> Operations { get; } = [];
+    public virtual List<FieldOperation> Operations { get; } = [];
     
-    public virtual OperationBuilder<AddFieldOperation> AddField(
-        string collectionName, string propertyName, Field field) {
+    public virtual OperationBuilder<AddFieldOperation> AddField(Field field) {
         var operation = new AddFieldOperation {
-            /*CollectionName = collectionName,
-            PropertyName = propertyName,*/
             Field = field,
             IsDestructive = false
         };
@@ -16,31 +14,32 @@ public class MigrationBuilder {
         return new(operation);
     }
 
-    public virtual OperationBuilder<DropFieldOperation> DropField(string collectionName, string propertyName, Field field) {
+    public virtual OperationBuilder<DropFieldOperation> DropField(Field field) {
         var operation = new DropFieldOperation {
-            /*CollectionName = collectionName,
-            PropertyName = propertyName,*/
             Field = field,
             IsDestructive = true
         };
         Operations.Add(operation);
-        return new OperationBuilder<DropFieldOperation>(operation);
+        return new(operation);
     }
     
-    public virtual OperationBuilder<AlterFieldOperation> AlterField(string collectionName, string propertyName, Field field, Field oldField) {
+    public virtual OperationBuilder<AlterFieldOperation> AlterField(Field field, Field oldField) {
         var operation = new AlterFieldOperation {
-            /*CollectionName = collectionName,
-            PropertyName = propertyName,*/
             Field = field,
-            OldField = new AddFieldOperation() {
-                /*CollectionName = collectionName,
-                PropertyName = propertyName,*/
-                Field = oldField,
-                IsDestructive = false
-            },
+            OldField = oldField,
             IsDestructive = true
         };
         Operations.Add(operation);
-        return new OperationBuilder<AlterFieldOperation>(operation);
+        return new(operation);
+    }
+
+    public virtual DocumentMigration Build() {
+        DocumentMigration migration = new DocumentMigration() {
+            MigratedOn = DateTime.MinValue.ToUniversalTime(),
+            IsMigrated = false,
+            MigrationNumber = 0,
+        };
+        migration.Build(this);
+        return migration;
     }
 }

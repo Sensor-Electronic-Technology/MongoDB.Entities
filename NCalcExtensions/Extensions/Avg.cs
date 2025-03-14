@@ -35,8 +35,7 @@ internal static class Avg
 
 		if (functionArgs.Parameters.Length == 1)
 		{
-			functionArgs.Result = originalList switch
-			{
+			functionArgs.Result = originalList switch {
 				null => null,
 				IEnumerable<byte> list => list.Average(e=>(int)e),
 				IEnumerable<byte?> list => list.DefaultIfEmpty(null).Average(e=>(int?)e),

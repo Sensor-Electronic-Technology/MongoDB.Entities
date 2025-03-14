@@ -7,7 +7,7 @@ namespace ConsoleTesting;
 
 
 [Collection("epi_runs")]
-public class EpiRun : Entity {
+public class EpiRun : Entity,ICreatedOn {
     public DateTime TimeStamp { get; set; }
     public string WaferId { get; set; }
     public string RunTypeId { get; set; }
@@ -23,10 +23,12 @@ public class EpiRun : Entity {
     public EpiRun() {
         this.InitOneToMany(()=>this.EpiRunMonitoring);
     }
+
+    public DateTime CreatedOn { get; set; }
 }
 
 [Collection("quick_tests")]
-public class QuickTest:Entity {
+public class QuickTest:Entity,ICreatedOn {
     public string WaferId { get; set; }
     public DateTime TimeStamp { get; set; }
     public One<EpiRun> EpiRun { get; set; }
@@ -41,10 +43,12 @@ public class QuickTest:Entity {
                   o.Unique = true;
               });
     }
+
+    public DateTime CreatedOn { get; set; }
 }
 
 [Collection("xrd_data")]
-public class XrdData : Entity {
+public class XrdData : Entity,ICreatedOn {
     public One<EpiRun> EpiRun { get; set; }
     public string WaferId { get; set; }
     public ICollection<XrdMeasurement> XrdMeasurements { get; set; }
@@ -56,6 +60,8 @@ public class XrdData : Entity {
                   o.Unique = true;
               });
     }
+
+    public DateTime CreatedOn { get; set; }
 }
 
 public class QtMeasurement {

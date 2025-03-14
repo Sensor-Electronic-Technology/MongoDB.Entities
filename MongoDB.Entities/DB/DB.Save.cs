@@ -322,8 +322,7 @@ public static partial class DB
                    : Collection<T>().BulkWriteAsync(session, models, _unOrdBlkOpts, cancellation);
     }
 
-    static bool PrepAndCheckIfInsert<T>(T entity) where T : IEntity
-    {
+    static bool PrepAndCheckIfInsert<T>(T entity) where T : IEntity {
         if (entity.HasDefaultID())
         {
             entity.SetId(entity.GenerateNewID());

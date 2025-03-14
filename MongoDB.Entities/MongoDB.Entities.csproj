@@ -31,11 +31,10 @@
 
     <ItemGroup>
         <PackageReference Include="Ardalis.SmartEnum" Version="8.2.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.Scripting.Common" Version="4.13.0" />
         <PackageReference Include="MongoDB.Driver" Version="3.2.0"/>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
-        <PackageReference Include="Z.Expressions.Eval" Version="6.2.7" />
         <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.0.2" />
+        <PackageReference Include="FastCloner" Version="3.3.2" />
     </ItemGroup>
 
     <ItemGroup>
