@@ -1,6 +1,6 @@
 ﻿namespace MongoDB.Entities;
 
-public enum ValueType {
+public enum VariableType {
     NUMBER,
     STRING,
     BOOLEAN,

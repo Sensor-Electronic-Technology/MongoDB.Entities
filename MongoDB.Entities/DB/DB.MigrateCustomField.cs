@@ -80,7 +80,6 @@ public static partial class DB {
             await collection.BulkWriteAsync(updates);
         }
     }
-    
     public static async Task UndoMigration(DocumentMigration migration) {
         //var logger = CreateLogger;
         if (migration.TypeConfiguration == null) {
@@ -172,7 +171,6 @@ public static partial class DB {
             doc.Add(sField.FieldName,BsonValue.Create(sField.DefaultValue));
         }
     }
-    
     public static async Task UpdateField(TypeConfiguration typeConfig, Field field,Field oldField, BsonDocument doc,BsonDocument entity) {
         if (field is ObjectField oField) {
             var objDoc=new BsonDocument();
@@ -189,118 +187,126 @@ public static partial class DB {
             doc.Add(cField.FieldName,BsonValue.Create(expression.Evaluate()));
         }
     }
-    
-    public static async Task<ExtendedExpression> ProcessCalculationField(CalculatedField cField, BsonDocument doc,BsonDocument entity) {
+    public static async Task<ExtendedExpression> ProcessCalculationField(CalculatedField cField, BsonDocument doc, BsonDocument entity) {
         var expression = new ExtendedExpression(cField.Expression);
         foreach (var variable in cField.Variables) {
             if (variable is ValueVariable vVar) {
                 expression.Parameters[vVar.VariableName] = vVar.Value;
             }else if (variable is PropertyVariable pVar) {
-                if(entity.Contains(pVar.PropertyName)) {
-                    expression.Parameters[pVar.VariableName] = entity[pVar.PropertyName];
-                }
-            }else if (variable is CollectionVariable cVar) {
-                if (entity.Contains(cVar.CollectionProperty)) {
-                    IQueryable<BsonValue>? query;
-                    Console.WriteLine(cVar.Filter?.ToString() ?? "Empty Filter");
-                    if (cVar.Filter != null) {
-                        query=entity[cVar.CollectionProperty].AsBsonArray.AsQueryable().Where(cVar.Filter.ToString());
-                    } else {
-                        query=entity[cVar.CollectionProperty].AsBsonArray.AsQueryable();
+                if (pVar is EmbeddedPropertyVariable embeddedVar) {
+                    var emDoc = entity[embeddedVar.Property].AsBsonDocument;
+
+                    for (int i = 0; i < embeddedVar.EmbeddedObjectProperties.Count; i++) {
+                        emDoc=emDoc[embeddedVar.EmbeddedObjectProperties[i]].AsBsonDocument;
                     }
-                    if (query.Count() != 0) {
-                        expression.Parameters[cVar.VariableName] = cVar.ValueType switch {
-                            ValueType.NUMBER => query.Select($"e=>e.{cVar.Property}.AsDouble").FirstOrDefault() ,
-                            ValueType.STRING => query.Select($"e=>e.{cVar.Property}.AsString").FirstOrDefault() ?? "",
-                            ValueType.BOOLEAN => query.Select($"e=>e.{cVar.Property}.AsBoolean").FirstOrDefault(),
-                            ValueType.DATE => query.Select(e => DateTime.Parse(e[cVar.Property].AsString)).FirstOrDefault(),
-                            ValueType.LIST_NUMBER => query.Select(e => e[cVar.Property].AsDouble),
-                            ValueType.LIST_STRING => query.Select(e => e[cVar.Property].AsString),
-                            ValueType.LIST_BOOLEAN => query.Select(e => e[cVar.Property].AsBoolean),
-                            ValueType.LIST_DATE => query.Select(e => DateTime.Parse(e[cVar.Property].AsString)),
-                            _ => query.Select(e => e[cVar.Property].AsDouble)
+                    expression.Parameters[embeddedVar.VariableName] = emDoc[embeddedVar.EmbeddedProperty];
+                }else if (pVar is CollectionPropertyVariable cVar) { 
+                    if (entity.Contains(cVar.CollectionProperty)) {
+                        IQueryable<BsonValue>? query;
+                        Console.WriteLine(cVar.Filter?.ToString() ?? "Empty Filter");
+                        if (cVar.Filter != null) {
+                            query=entity[cVar.CollectionProperty].AsBsonArray.AsQueryable().Where(cVar.Filter.ToString());
+                        } else {
+                            query=entity[cVar.CollectionProperty].AsBsonArray.AsQueryable();
+                        }
+                        if (query.Count() != 0) {
+                            expression.Parameters[cVar.VariableName] = cVar.VariableType switch {
+                                VariableType.NUMBER => query.Select($"e=>e.{cVar.Property}.AsDouble").FirstOrDefault() ,
+                                VariableType.STRING => query.Select($"e=>e.{cVar.Property}.AsString").FirstOrDefault() ?? "",
+                                VariableType.BOOLEAN => query.Select($"e=>e.{cVar.Property}.AsBoolean").FirstOrDefault(),
+                                VariableType.DATE => query.Select(e => DateTime.Parse(e[cVar.Property].AsString)).FirstOrDefault(),
+                                VariableType.LIST_NUMBER => query.Select(e => e[cVar.Property].AsDouble),
+                                VariableType.LIST_STRING => query.Select(e => e[cVar.Property].AsString),
+                                VariableType.LIST_BOOLEAN => query.Select(e => e[cVar.Property].AsBoolean),
+                                VariableType.LIST_DATE => query.Select(e => DateTime.Parse(e[cVar.Property].AsString)),
+                                _ => query.Select(e => e[cVar.Property].AsDouble)
+                            };
+                        } else {
+                            expression.Parameters[cVar.VariableName] = cVar.VariableType switch {
+                                VariableType.NUMBER => 0.00,
+                                VariableType.STRING => "",
+                                VariableType.BOOLEAN => false,
+                                VariableType.DATE => DateTime.MinValue,
+                                VariableType.LIST_NUMBER => new List<double>(){0,0,0},
+                                VariableType.LIST_STRING => new List<string>(){"","",""},
+                                VariableType.LIST_BOOLEAN => new List<bool>(){false,false,false},
+                                VariableType.LIST_DATE => new List<DateTime>(){DateTime.MinValue,DateTime.MinValue,DateTime.MinValue},
+                                _ => throw new ArgumentException("Empty Value type not supported")
+                            };
+                        }
+                    }
+                }else if (pVar is RefPropertyVariable rVar) { 
+                    var collection = DB.Collection(rVar.DatabaseName,rVar.CollectionName).AsQueryable();
+                    if (rVar.Filter != null) {
+                        collection.Where(rVar.Filter.ToString());
+                    }
+                    if (collection.Any()) {
+                        expression.Parameters[rVar.VariableName] = rVar.VariableType switch {
+                            VariableType.NUMBER => collection.Select(e => e[rVar.Property].AsDouble).FirstOrDefault(),
+                            VariableType.STRING => collection.Select(e => e[rVar.Property].AsString).FirstOrDefault(),
+                            VariableType.BOOLEAN => collection.Select(e => e[rVar.Property].AsBoolean).FirstOrDefault(),
+                            VariableType.DATE => collection.Select(e => DateTime.Parse(e[rVar.Property].AsString)).FirstOrDefault(),
+                            VariableType.LIST_NUMBER => collection.Select(e => e[rVar.Property].AsDouble),
+                            VariableType.LIST_STRING => collection.Select(e => e[rVar.Property].AsString),
+                            VariableType.LIST_BOOLEAN => collection.Select(e => e[rVar.Property].AsBoolean),
+                            VariableType.LIST_DATE => collection.Select(e => DateTime.Parse(e[rVar.Property].AsString)),
+                            _ => throw new ArgumentException("Empty Value type not supported")
                         };
                     } else {
-                        expression.Parameters[cVar.VariableName] = cVar.ValueType switch {
-                            ValueType.NUMBER => 0.00,
-                            ValueType.STRING => "",
-                            ValueType.BOOLEAN => false,
-                            ValueType.DATE => DateTime.MinValue,
-                            ValueType.LIST_NUMBER => new List<double>(){0,0,0},
-                            ValueType.LIST_STRING => new List<string>(){"","",""},
-                            ValueType.LIST_BOOLEAN => new List<bool>(){false,false,false},
-                            ValueType.LIST_DATE => new List<DateTime>(){DateTime.MinValue,DateTime.MinValue,DateTime.MinValue},
+                        expression.Parameters[rVar.VariableName] = rVar.VariableType switch {
+                            VariableType.NUMBER => 0.00,
+                            VariableType.STRING => "",
+                            VariableType.BOOLEAN => false,
+                            VariableType.DATE => DateTime.MinValue,
+                            VariableType.LIST_NUMBER => new List<double>(),
+                            VariableType.LIST_STRING => new List<string>(),
+                            VariableType.LIST_BOOLEAN => new List<bool>(),
+                            VariableType.LIST_DATE => new List<DateTime>(),
                             _ => throw new ArgumentException("Empty Value type not supported")
                         };
                     }
-                }
-            }else if (variable is ReferencePropertyVariable rVar) {
-                var collection = DB.Collection(rVar.DatabaseName,rVar.CollectionName).AsQueryable();
-                if (rVar.Filter != null) {
-                    collection.Where(rVar.Filter.ToString());
-                }
-                if (collection.Any()) {
-                    expression.Parameters[rVar.VariableName] = rVar.ValueType switch {
-                        ValueType.NUMBER => collection.Select(e => e[rVar.PropertyName].AsDouble).FirstOrDefault(),
-                        ValueType.STRING => collection.Select(e => e[rVar.PropertyName].AsString).FirstOrDefault(),
-                        ValueType.BOOLEAN => collection.Select(e => e[rVar.PropertyName].AsBoolean).FirstOrDefault(),
-                        ValueType.DATE => collection.Select(e => DateTime.Parse(e[rVar.PropertyName].AsString)).FirstOrDefault(),
-                        ValueType.LIST_NUMBER => collection.Select(e => e[rVar.PropertyName].AsDouble),
-                        ValueType.LIST_STRING => collection.Select(e => e[rVar.PropertyName].AsString),
-                        ValueType.LIST_BOOLEAN => collection.Select(e => e[rVar.PropertyName].AsBoolean),
-                        ValueType.LIST_DATE => collection.Select(e => DateTime.Parse(e[rVar.PropertyName].AsString)),
-                        _ => throw new ArgumentException("Empty Value type not supported")
-                    };
-                } else {
-                    expression.Parameters[rVar.VariableName] = rVar.ValueType switch {
-                        ValueType.NUMBER => 0.00,
-                        ValueType.STRING => "",
-                        ValueType.BOOLEAN => false,
-                        ValueType.DATE => DateTime.MinValue,
-                        ValueType.LIST_NUMBER => new List<double>(),
-                        ValueType.LIST_STRING => new List<string>(),
-                        ValueType.LIST_BOOLEAN => new List<bool>(),
-                        ValueType.LIST_DATE => new List<DateTime>(),
-                        _ => throw new ArgumentException("Empty Value type not supported")
-                    };
-                }
-            }else if (variable is ReferenceCollectionVariable rcVar) {
-                var collection = DB.Collection(rcVar.DatabaseName, rcVar.CollectionName);
-                List<BsonDocument> list = [];
-                if (rcVar.Filter != null) {
-                    list=await collection.AsQueryable().Where(rcVar.Filter.ToString()).ToListAsync();
-                } else {
-                    list=await collection.Find(_=>true).ToListAsync();
-                }
-                var query=list.SelectMany(e => e[rcVar.CollectionProperty].AsBsonArray).ToList();
+                }else if (pVar is RefCollectionPropertyVariable rcVar) {
+                    var collection = DB.Collection(rcVar.DatabaseName, rcVar.CollectionName);
+                    List<BsonDocument> list = [];
+                    if (rcVar.Filter != null) {
+                        list=await collection.AsQueryable().Where(rcVar.Filter.ToString()).ToListAsync();
+                    } else {
+                        list=await collection.Find(_=>true).ToListAsync();
+                    }
+                    var query=list.SelectMany(e => e[rcVar.CollectionProperty].AsBsonArray).ToList();
 
-                if (rcVar.SubFilter != null) {
-                    query.AsQueryable().Where(rcVar.SubFilter.ToString());
-                }
-                if (query.Count!=0) {
-                    expression.Parameters[rcVar.VariableName] = rcVar.ValueType switch {
-                        ValueType.NUMBER => query.Select(e => e[rcVar.Property].AsDouble).FirstOrDefault(),
-                        ValueType.STRING => query.Select(e => e[rcVar.Property].AsString).FirstOrDefault(),
-                        ValueType.BOOLEAN => query.Select(e => e[rcVar.Property].AsBoolean).FirstOrDefault(),
-                        ValueType.DATE => query.Select(e => DateTime.Parse(e[rcVar.Property].AsString)).FirstOrDefault(),
-                        ValueType.LIST_NUMBER => query.Select(e => e[rcVar.Property].AsDouble),
-                        ValueType.LIST_STRING => query.Select(e => e[rcVar.Property].AsString),
-                        ValueType.LIST_BOOLEAN => query.Select(e => e[rcVar.Property].AsBoolean),
-                        ValueType.LIST_DATE => query.Select(e => DateTime.Parse(e[rcVar.Property].AsString)),
-                        _ => throw new ArgumentException("Empty Value type not supported")
-                    };
+                    if (rcVar.SubFilter != null) {
+                        query.AsQueryable().Where(rcVar.SubFilter.ToString());
+                    }
+                    if (query.Count!=0) {
+                        expression.Parameters[rcVar.VariableName] = rcVar.VariableType switch {
+                            VariableType.NUMBER => query.Select(e => e[rcVar.Property].AsDouble).FirstOrDefault(),
+                            VariableType.STRING => query.Select(e => e[rcVar.Property].AsString).FirstOrDefault(),
+                            VariableType.BOOLEAN => query.Select(e => e[rcVar.Property].AsBoolean).FirstOrDefault(),
+                            VariableType.DATE => query.Select(e => DateTime.Parse(e[rcVar.Property].AsString)).FirstOrDefault(),
+                            VariableType.LIST_NUMBER => query.Select(e => e[rcVar.Property].AsDouble),
+                            VariableType.LIST_STRING => query.Select(e => e[rcVar.Property].AsString),
+                            VariableType.LIST_BOOLEAN => query.Select(e => e[rcVar.Property].AsBoolean),
+                            VariableType.LIST_DATE => query.Select(e => DateTime.Parse(e[rcVar.Property].AsString)),
+                            _ => throw new ArgumentException("Empty Value type not supported")
+                        };
+                    } else {
+                        expression.Parameters[rcVar.VariableName] = rcVar.VariableType switch {
+                            VariableType.NUMBER => 0.00,
+                            VariableType.STRING => "",
+                            VariableType.BOOLEAN => false,
+                            VariableType.DATE => DateTime.MinValue,
+                            VariableType.LIST_NUMBER => new List<double>(),
+                            VariableType.LIST_STRING => new List<string>(),
+                            VariableType.LIST_BOOLEAN => new List<bool>(),
+                            VariableType.LIST_DATE => new List<DateTime>(),
+                            _ => throw new ArgumentException("Empty Value type not supported")
+                        };
+                    }
                 } else {
-                    expression.Parameters[rcVar.VariableName] = rcVar.ValueType switch {
-                        ValueType.NUMBER => 0.00,
-                        ValueType.STRING => "",
-                        ValueType.BOOLEAN => false,
-                        ValueType.DATE => DateTime.MinValue,
-                        ValueType.LIST_NUMBER => new List<double>(),
-                        ValueType.LIST_STRING => new List<string>(),
-                        ValueType.LIST_BOOLEAN => new List<bool>(),
-                        ValueType.LIST_DATE => new List<DateTime>(),
-                        _ => throw new ArgumentException("Empty Value type not supported")
-                    };
+                    if(entity.Contains(pVar.Property)) {
+                        expression.Parameters[pVar.VariableName] = entity[pVar.Property];
+                    }
                 }
             }
         }

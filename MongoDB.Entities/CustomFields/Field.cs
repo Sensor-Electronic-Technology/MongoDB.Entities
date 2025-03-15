@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -45,7 +47,35 @@ public class SelectionField : Field {
     public object? DefaultValue { get; set; }
 }
 
-public class CalculatedField:ValueField  {
+public partial class CalculatedField:ValueField  {
+    //Regex.Matches(expression, @"\[(.*?)\]", RegexOptions.Compiled);
     public string Expression { get; set; } = string.Empty;
     public List<Variable> Variables { get; set; } = [];
+    
+    [GeneratedRegex(@"\[(.*?)\]")]
+    private static partial Regex MyRegex();
+
+    public bool IsValid() {
+         var regex = MyRegex();
+         var matches=regex.Matches(this.Expression);
+
+         if (matches.Count!=this.Variables.Count) {
+             return false;
+         }
+         bool isValid=true;
+         var variables = this.Variables.Select(e => e.VariableName).ToArray();
+         
+         foreach (Match match in matches) {
+             if (!variables.Contains(match.Groups[1].Value)) {
+                 isValid = false;
+                 break;
+             }
+         }
+         return isValid;
+    }
+}
+
+public class BooleanField : CalculatedField  {
+    public object TrueValue { get; set; } = true;
+    public object FalseValue { get; set; } = false;
 }
