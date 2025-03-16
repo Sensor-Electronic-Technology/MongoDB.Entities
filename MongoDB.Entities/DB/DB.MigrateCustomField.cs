@@ -163,8 +163,13 @@ public static partial class DB {
         }else if (field is ValueField vField) {
             if (vField is CalculatedField calcField) {
                 var expression=await ProcessCalculationField(calcField,doc,entity);
-                doc.Add(calcField.FieldName,BsonValue.Create(expression.Evaluate()));
-            } else {
+                if (calcField.IsBooleanExpression) {
+                    object result=((bool)expression.Evaluate()) ? calcField.TrueValue : calcField.FalseValue;
+                    doc.Add(calcField.FieldName,BsonValue.Create(result));
+                } else {
+                    doc.Add(calcField.FieldName,BsonValue.Create(expression.Evaluate()));
+                }
+            }else {
                 doc.Add(vField.FieldName,BsonValue.Create(vField.DefaultValue));
             }
         }else if (field is SelectionField sField) {
@@ -195,11 +200,20 @@ public static partial class DB {
             }else if (variable is PropertyVariable pVar) {
                 if (pVar is EmbeddedPropertyVariable embeddedVar) {
                     var emDoc = entity[embeddedVar.Property].AsBsonDocument;
-
                     for (int i = 0; i < embeddedVar.EmbeddedObjectProperties.Count; i++) {
                         emDoc=emDoc[embeddedVar.EmbeddedObjectProperties[i]].AsBsonDocument;
                     }
-                    expression.Parameters[embeddedVar.VariableName] = emDoc[embeddedVar.EmbeddedProperty];
+                    expression.Parameters[embeddedVar.VariableName] = embeddedVar.VariableType switch {
+                        VariableType.NUMBER => emDoc[embeddedVar.EmbeddedProperty].AsDouble,
+                        VariableType.STRING => emDoc[embeddedVar.EmbeddedProperty].AsString ?? "",
+                        VariableType.BOOLEAN => emDoc[embeddedVar.EmbeddedProperty].AsBoolean,
+                        VariableType.DATE => DateTime.Parse(emDoc[embeddedVar.EmbeddedProperty].AsString),
+                        VariableType.LIST_NUMBER => emDoc[embeddedVar.EmbeddedProperty].AsBsonArray.Select(e => e.AsDouble),
+                        VariableType.LIST_STRING => emDoc[embeddedVar.EmbeddedProperty].AsBsonArray.Select(e => e.AsString),
+                        VariableType.LIST_BOOLEAN => emDoc[embeddedVar.EmbeddedProperty].AsBsonArray.Select(e => e.AsBoolean),
+                        VariableType.LIST_DATE => emDoc[embeddedVar.EmbeddedProperty].AsBsonArray.Select(e => DateTime.Parse(e.AsString)),
+                        _ => emDoc[embeddedVar.EmbeddedProperty].AsDouble
+                    };
                 }else if (pVar is CollectionPropertyVariable cVar) { 
                     if (entity.Contains(cVar.CollectionProperty)) {
                         IQueryable<BsonValue>? query;

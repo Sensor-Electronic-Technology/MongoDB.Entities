@@ -17,23 +17,49 @@ using CollectionPropertyVariable = MongoDB.Entities.CollectionPropertyVariable;
 using VariableType = MongoDB.Entities.VariableType;
 
 await DB.InitAsync("epi_system", "172.20.3.41");
+
+
 //await UndoRedoAll();
+await BuildMigration2();
+await DB.MigrateFields();
+await BuilderMigration3();
+await DB.MigrateFields();
+Console.WriteLine("Migration 3 created, Migrating...");
 
-string expression = "([pAvg]>=[pCritera]) && ([wlAvg]>=[wlMin] && [wlMax]>=[wlAvg])";
+Console.WriteLine("Check database");
+//await UndoMigration();
 
-/*value.Count(c=>c=='[');
-value.Count(c=>c==']');*/
-/*string[] splitResult = Regex.Split(value, @"\[(.*?)\]",RegexOptions.Compiled);
-Console.WriteLine(JsonSerializer.Serialize(splitResult));*/
-
-
-var matches = Regex.Matches(expression, @"\[(.*?)\]", RegexOptions.Compiled);
-foreach (Match match in matches)
-{
-    string content = match.Groups[1].Value;
-    Console.WriteLine($"Content between brackets: {content}");
-    // Perform any additional processing on the content here
-}
+/*var filter=new Filter() {
+    FieldName = nameof(QtMeasurement.Power),
+    ComparisonOperator = ComparisonOperator.LessThanOrEqual,
+    LogicalOperator = LogicalOperator.And,
+    Value = 1100,
+    Filters = new List<Filter>() {
+        new() {
+            FieldName = nameof(QtMeasurement.Power),
+            ComparisonOperator = ComparisonOperator.GreaterThan,
+            LogicalOperator = LogicalOperator.And,
+            Value = 500
+        },
+        new() {
+            FieldName = "Wavelength",
+            ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
+            LogicalOperator = LogicalOperator.And,
+            Value = 270,
+            Filters = new List<Filter>() {
+                new() {
+                    FieldName = "Wavelength",
+                    ComparisonOperator = ComparisonOperator.LessThanOrEqual,
+                    LogicalOperator = LogicalOperator.Or,
+                    Value = 279
+                }
+            }
+        }
+    }
+};
+Console.WriteLine($"Greater: {filter.ComparisonOperator.Value}");
+Console.WriteLine($"And: {filter.LogicalOperator.Value}");
+Console.WriteLine(filter.ToString());*/
 
 async Task UndoRedoAll() {
     Console.WriteLine("Dropping database...");
@@ -55,9 +81,26 @@ async Task UndoRedoAll() {
     Console.WriteLine("Check database, press any key to undo migration 2");
     Console.ReadKey();
     await UndoMigration();
+    Console.WriteLine("Check database, press any key to add migration 3");
+    Console.ReadKey();
+    await BuilderMigration3();
+    Console.WriteLine("Migration 3 created, Migrating...");
+    await DB.MigrateFields();
+    Console.WriteLine("Check database");
 }
 
-async Task UndoMigration() {
+void TestExpressionCheck() {
+    string expression = "([pAvg]>=[pCritera]) && ([wlAvg]>=[wlMin] && [wlMax]>=[wlAvg])";
+    var matches = Regex.Matches(expression, @"\[(.*?)\]", RegexOptions.Compiled);
+    foreach (Match match in matches)
+    {
+        string content = match.Groups[1].Value;
+        Console.WriteLine($"Content between brackets: {content}");
+        // Perform any additional processing on the content here
+    }
+}
+
+async Task UndoMigration(int number=2) {
     var migration = await DB.Collection<DocumentMigration>().Find(e=>e.MigrationNumber==2)
                             .FirstOrDefaultAsync();
     if (migration != null) {
@@ -79,23 +122,95 @@ async Task BuilderMigration3() {
     var typeConfig = await DB.Collection<TypeConfiguration>()
                              .Find(e => e.CollectionName == collectionName)
                              .FirstOrDefaultAsync();
+    
 
     var objField = new ObjectField() {
-        FieldName = "Pass Fail",
+        FieldName = "Qt Pass/Fail",
         BsonType=BsonType.Document,
         TypeCode=TypeCode.Object,
         Fields = [
             new CalculatedField() {
-                FieldName = "Power Result",
-                BsonType=BsonType.Double,
+                FieldName = "Power Pass/Fail",
+                BsonType=BsonType.String,
+                IsBooleanExpression = true,
                 DefaultValue = "Fail",
-                Expression = "[pAvg>[pCriteria]]",
+                TrueValue = "Pass",
+                FalseValue = "Fail",
+                Expression = "[pAvg]>[pCriteria]",
                 QuantityName = "",
                 TypeCode = TypeCode.String,
-                
+                Variables = [
+                    new ValueVariable() {
+                        VariableName = "pCriteria",
+                        TypeCode = TypeCode.Double,
+                        VariableType = VariableType.NUMBER,
+                        Value = 950
+                    },
+                    new EmbeddedPropertyVariable() {
+                        VariableName = "pAvg",
+                        EmbeddedProperty = "Avg. Initial Power",
+                        EmbeddedObjectProperties = ["Qt Summary"],
+                        Property = "AdditionalData",
+                        VariableType = VariableType.NUMBER,
+                    }
+                ]
+            },
+            new CalculatedField() {
+                FieldName = "Pass Fail",
+                BsonType=BsonType.String,
+                IsBooleanExpression = true,
+                DefaultValue = "Fail",
+                TrueValue = "Pass",
+                FalseValue = "Fail",
+                Expression = "([pAvg]>[pCriteria]) && ([wlAvg]>=[wlMin] && [wlAvg] <= [wlMax])",
+                QuantityName = "",
+                TypeCode = TypeCode.String,
+                Variables = [
+                    new ValueVariable() {
+                        VariableName = "wlMax",
+                        TypeCode = TypeCode.Double,
+                        VariableType = VariableType.NUMBER,
+                        Value=279.5,
+                    },
+                    new ValueVariable() {
+                        VariableName = "wlMin",
+                        TypeCode = TypeCode.Double,
+                        VariableType = VariableType.NUMBER,
+                        Value=270.5,
+                    },
+                    new ValueVariable() {
+                        VariableName = "pCriteria",
+                        TypeCode = TypeCode.Double,
+                        VariableType = VariableType.NUMBER,
+                        Value = 950
+                    },
+                    new EmbeddedPropertyVariable() {
+                        VariableName = "pAvg",
+                        EmbeddedProperty = "Avg. Initial Power",
+                        EmbeddedObjectProperties = ["Qt Summary"],
+                        Property = "AdditionalData",
+                        VariableType = VariableType.NUMBER,
+                    },
+                    new EmbeddedPropertyVariable() {
+                        VariableName = "wlAvg",
+                        EmbeddedProperty = "Avg. Wl",
+                        EmbeddedObjectProperties = ["Qt Summary"],
+                        Property = "AdditionalData",
+                        VariableType = VariableType.NUMBER,
+                    },
+                ]
             }
         ]
     };
+
+    
+    MigrationBuilder builder = new MigrationBuilder();
+    builder.AddField(objField);
+    var migration = builder.Build();
+    migration.TypeConfiguration=typeConfig.ToReference();
+    migration.MigrationNumber=++migrationNumber;
+    await migration.SaveAsync();
+    Console.WriteLine("Migration saved");
 }
 
 
@@ -112,6 +227,34 @@ async Task BuildMigration2() {
                              .FirstOrDefaultAsync();
     var field = typeConfig.Fields[0];
     var updatedField = FastCloner.FastCloner.DeepClone(field as ObjectField);
+    var filter=new Filter() {
+        FieldName = nameof(QtMeasurement.Power),
+        CompareOperator = ComparisonOperator.LessThanOrEqual,
+        FilterLogicalOperator = LogicalOperator.And,
+        Value = 1100,
+        Filters = new List<Filter>() {
+            new() {
+                FieldName = nameof(QtMeasurement.Power),
+                CompareOperator = ComparisonOperator.GreaterThan,
+                FilterLogicalOperator = LogicalOperator.And,
+                Value = 500
+            },
+            new() {
+                FieldName = "Wavelength",
+                CompareOperator = ComparisonOperator.GreaterThanOrEqual,
+                FilterLogicalOperator = LogicalOperator.And,
+                Value = 270,
+                Filters = new List<Filter>() {
+                    new() {
+                        FieldName = "Wavelength",
+                        CompareOperator = ComparisonOperator.LessThanOrEqual,
+                        FilterLogicalOperator = LogicalOperator.Or,
+                        Value = 279
+                    }
+                }
+            }
+        }
+    };
     if (updatedField != null) {
         var voltAvg = new CalculatedField() {
             FieldName = "Avg. Voltage",
@@ -124,34 +267,7 @@ async Task BuildMigration2() {
                     VariableName = "voltages",
                     CollectionProperty = nameof(QuickTest.InitialMeasurements),
                     VariableType = VariableType.LIST_NUMBER,
-                    Filter = new() {
-                        FieldName = nameof(QtMeasurement.Power),
-                        ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                        LogicalOperator = LogicalOperator.And,
-                        Value = 1100,
-                        Filters = new List<Filter>() {
-                            new() {
-                                FieldName = nameof(QtMeasurement.Power),
-                                ComparisonOperator = ComparisonOperator.GreaterThan,
-                                LogicalOperator = LogicalOperator.And,
-                                Value = 500
-                            },
-                            new() {
-                                FieldName = "Wavelength",
-                                ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-                                LogicalOperator = LogicalOperator.And,
-                                Value = 270,
-                                Filters = new List<Filter>() {
-                                    new() {
-                                        FieldName = "Wavelength",
-                                        ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                                        LogicalOperator = LogicalOperator.Or,
-                                        Value = 279
-                                    }
-                                }
-                            }
-                        }
-                    },
+                    Filter = filter,
                 },
             ]
         };
@@ -187,26 +303,26 @@ async Task CheckMigrationConflicts() {
                         CollectionProperty = "InitialMeasurements",
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Power),
-                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                            LogicalOperator = LogicalOperator.And,
+                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                            FilterLogicalOperator = LogicalOperator.And,
                             Value = 1100,
                             Filters = new List<Filter>() {
                                 new() {
                                     FieldName = nameof(QtMeasurement.Power),
-                                    ComparisonOperator = ComparisonOperator.GreaterThan,
-                                    LogicalOperator = LogicalOperator.And,
+                                    CompareOperator = ComparisonOperator.GreaterThan,
+                                    FilterLogicalOperator = LogicalOperator.And,
                                     Value = 500
                                 },
                                 new() {
                                     FieldName = "Wavelength",
-                                    ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-                                    LogicalOperator = LogicalOperator.Or,
+                                    CompareOperator = ComparisonOperator.GreaterThanOrEqual,
+                                    FilterLogicalOperator = LogicalOperator.Or,
                                     Value = 270,
                                     Filters = new List<Filter>() {
                                         new() {
                                             FieldName = "Wavelength",
-                                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                                            LogicalOperator = LogicalOperator.Or,
+                                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                                            FilterLogicalOperator = LogicalOperator.Or,
                                             Value = 279
                                         }
                                     }
@@ -230,26 +346,26 @@ async Task CheckMigrationConflicts() {
                         VariableType = VariableType.LIST_NUMBER,
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Area),
-                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                            LogicalOperator = LogicalOperator.And,
+                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                            FilterLogicalOperator = LogicalOperator.And,
                             Value = 1100,
                             Filters = new List<Filter>() {
                                 new() {
                                     FieldName = nameof(QtMeasurement.Power),
-                                    ComparisonOperator = ComparisonOperator.GreaterThan,
-                                    LogicalOperator = LogicalOperator.And,
+                                    CompareOperator = ComparisonOperator.GreaterThan,
+                                    FilterLogicalOperator = LogicalOperator.And,
                                     Value = 100
                                 },
                                 new() {
                                     FieldName = "Wavelength",
-                                    ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-                                    LogicalOperator = LogicalOperator.Or,
+                                    CompareOperator = ComparisonOperator.GreaterThanOrEqual,
+                                    FilterLogicalOperator = LogicalOperator.Or,
                                     Value = 270,
                                     Filters = new List<Filter>() {
                                         new() {
                                             FieldName = "Wavelength",
-                                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                                            LogicalOperator = LogicalOperator.Or,
+                                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                                            FilterLogicalOperator = LogicalOperator.Or,
                                             Value = 279
                                         }
                                     }
@@ -295,26 +411,26 @@ async Task BuildMigration() {
                         CollectionProperty = "InitialMeasurements",
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Power),
-                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                            LogicalOperator = LogicalOperator.And,
+                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                            FilterLogicalOperator = LogicalOperator.And,
                             Value = 1100,
                             Filters = new List<Filter>() {
                                 new() {
                                     FieldName = nameof(QtMeasurement.Power),
-                                    ComparisonOperator = ComparisonOperator.GreaterThan,
-                                    LogicalOperator = LogicalOperator.And,
+                                    CompareOperator = ComparisonOperator.GreaterThan,
+                                    FilterLogicalOperator = LogicalOperator.And,
                                     Value = 500
                                 },
                                 new() {
                                     FieldName = "Wavelength",
-                                    ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-                                    LogicalOperator = LogicalOperator.And,
+                                    CompareOperator = ComparisonOperator.GreaterThanOrEqual,
+                                    FilterLogicalOperator = LogicalOperator.And,
                                     Value = 270,
                                     Filters = new List<Filter>() {
                                         new() {
                                             FieldName = "Wavelength",
-                                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                                            LogicalOperator = LogicalOperator.Or,
+                                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                                            FilterLogicalOperator = LogicalOperator.Or,
                                             Value = 279
                                         }
                                     }
@@ -338,26 +454,26 @@ async Task BuildMigration() {
                         VariableType = VariableType.LIST_NUMBER,
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Power),
-                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                            LogicalOperator = LogicalOperator.And,
+                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                            FilterLogicalOperator = LogicalOperator.And,
                             Value = 1100,
                             Filters = new List<Filter>() {
                                 new() {
                                     FieldName = nameof(QtMeasurement.Power),
-                                    ComparisonOperator = ComparisonOperator.GreaterThan,
-                                    LogicalOperator = LogicalOperator.And,
+                                    CompareOperator = ComparisonOperator.GreaterThan,
+                                    FilterLogicalOperator = LogicalOperator.And,
                                     Value = 500
                                 },
                                 new() {
                                     FieldName = "Wavelength",
-                                    ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-                                    LogicalOperator = LogicalOperator.And,
+                                    CompareOperator = ComparisonOperator.GreaterThanOrEqual,
+                                    FilterLogicalOperator = LogicalOperator.And,
                                     Value = 270,
                                     Filters = new List<Filter>() {
                                         new() {
                                             FieldName = "Wavelength",
-                                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                                            LogicalOperator = LogicalOperator.Or,
+                                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                                            FilterLogicalOperator = LogicalOperator.Or,
                                             Value = 279
                                         }
                                     }
@@ -384,6 +500,20 @@ async Task BuildMigration() {
     //await typeConfig.SaveAsync();
     await migration.SaveAsync();
     Console.WriteLine("Migration Created");
+}
+
+void CheckNCalcBoolean() {
+    var expression = new ExtendedExpression("([pAvg]>[pCriteria]) && ([wlAvg]>=[wlMin] && [wlAvg] <= [wlMax])");
+    Random rand=new Random();
+    for (int i = 0; i < 100; i++) {
+        expression.Parameters["pAvg"] = rand.NextInt64(990, 1010);
+        expression.Parameters["pCriteria"] = 1000;
+        expression.Parameters["wlAvg"] = rand.NextInt64(275, 280);
+        expression.Parameters["wlMin"] = 275;
+        expression.Parameters["wlMax"] = 279.5;
+        string result=((bool)expression.Evaluate()) ? "Pass": "Fail";
+        Console.WriteLine($"W{i}: P: {expression.Parameters["pAvg"] } Wl: {expression.Parameters["wlAvg"]} Result: {result}");
+    }
 }
 
 async Task TestSubFilter() {
@@ -422,26 +552,26 @@ async Task TestSubFilter() {
 async Task TestBuilderFilter() {
     var filter = new Filter() {
         FieldName = nameof(QtMeasurement.Power),
-        ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-        LogicalOperator = LogicalOperator.And,
+        CompareOperator = ComparisonOperator.LessThanOrEqual,
+        FilterLogicalOperator = LogicalOperator.And,
         Value = 1300,
         Filters = new List<Filter>() {
             new Filter() {
                 FieldName = nameof(QtMeasurement.Power),
-                ComparisonOperator = ComparisonOperator.GreaterThan,
-                LogicalOperator = LogicalOperator.And,
+                CompareOperator = ComparisonOperator.GreaterThan,
+                FilterLogicalOperator = LogicalOperator.And,
                 Value = 100
             },
             new Filter() {
                 FieldName = "Wavelength",
-                ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-                LogicalOperator = LogicalOperator.Or,
+                CompareOperator = ComparisonOperator.GreaterThanOrEqual,
+                FilterLogicalOperator = LogicalOperator.Or,
                 Value = 275,
                 Filters = new List<Filter>() {
                     new Filter() {
                         FieldName = "Wavelength",
-                        ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                        LogicalOperator = LogicalOperator.Or,
+                        CompareOperator = ComparisonOperator.LessThanOrEqual,
+                        FilterLogicalOperator = LogicalOperator.Or,
                         Value = 278
                     }
                 }
@@ -478,26 +608,26 @@ async Task TestDynamicScript() {
                         CollectionProperty = "InitialMeasurements",
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Area),
-                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                            LogicalOperator = LogicalOperator.And,
+                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                            FilterLogicalOperator = LogicalOperator.And,
                             Value = 1100,
                             Filters = new List<Filter>() {
                                 new() {
                                     FieldName = nameof(QtMeasurement.Power),
-                                    ComparisonOperator = ComparisonOperator.GreaterThan,
-                                    LogicalOperator = LogicalOperator.And,
+                                    CompareOperator = ComparisonOperator.GreaterThan,
+                                    FilterLogicalOperator = LogicalOperator.And,
                                     Value = 900
                                 },
                                 new() {
                                     FieldName = "Wavelength",
-                                    ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-                                    LogicalOperator = LogicalOperator.Or,
+                                    CompareOperator = ComparisonOperator.GreaterThanOrEqual,
+                                    FilterLogicalOperator = LogicalOperator.Or,
                                     Value = 275,
                                     Filters = new List<Filter>() {
                                         new() {
                                             FieldName = "Wavelength",
-                                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                                            LogicalOperator = LogicalOperator.Or,
+                                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                                            FilterLogicalOperator = LogicalOperator.Or,
                                             Value = 278
                                         }
                                     }
@@ -521,26 +651,26 @@ async Task TestDynamicScript() {
                         VariableType = VariableType.LIST_NUMBER,
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Area),
-                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                            LogicalOperator = LogicalOperator.And,
+                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                            FilterLogicalOperator = LogicalOperator.And,
                             Value = 1100,
                             Filters = new List<Filter>() {
                                 new() {
                                     FieldName = nameof(QtMeasurement.Power),
-                                    ComparisonOperator = ComparisonOperator.GreaterThan,
-                                    LogicalOperator = LogicalOperator.And,
+                                    CompareOperator = ComparisonOperator.GreaterThan,
+                                    FilterLogicalOperator = LogicalOperator.And,
                                     Value = 500
                                 },
                                 new() {
                                     FieldName = "Wavelength",
-                                    ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-                                    LogicalOperator = LogicalOperator.Or,
+                                    CompareOperator = ComparisonOperator.GreaterThanOrEqual,
+                                    FilterLogicalOperator = LogicalOperator.Or,
                                     Value = 275,
                                     Filters = new List<Filter>() {
                                         new() {
                                             FieldName = "Wavelength",
-                                            ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                                            LogicalOperator = LogicalOperator.Or,
+                                            CompareOperator = ComparisonOperator.LessThanOrEqual,
+                                            FilterLogicalOperator = LogicalOperator.Or,
                                             Value = 278
                                         }
                                     }

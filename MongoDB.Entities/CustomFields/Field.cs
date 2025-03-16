@@ -51,6 +51,10 @@ public partial class CalculatedField:ValueField  {
     //Regex.Matches(expression, @"\[(.*?)\]", RegexOptions.Compiled);
     public string Expression { get; set; } = string.Empty;
     public List<Variable> Variables { get; set; } = [];
+    public bool IsBooleanExpression { get; set; } = false;
+    
+    public object TrueValue { get; set; }
+    public object FalseValue { get; set; }
     
     [GeneratedRegex(@"\[(.*?)\]")]
     private static partial Regex MyRegex();
@@ -73,9 +77,4 @@ public partial class CalculatedField:ValueField  {
          }
          return isValid;
     }
-}
-
-public class BooleanField : CalculatedField  {
-    public object TrueValue { get; set; } = true;
-    public object FalseValue { get; set; } = false;
 }
