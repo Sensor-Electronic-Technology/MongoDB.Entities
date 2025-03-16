@@ -20,9 +20,9 @@ jobs:
         run: dotnet pack MongoDB.Entities/MongoDB.Entities.csproj -c Release
 
       - name: Publish To Nuget
-        run: dotnet nuget push MongoDB.Entities/bin/Release/*.nupkg -k $NUGET_AUTH_TOKEN -s https://api.nuget.org/v3/index.json
+        run: dotnet nuget push MongoDB.Entities/bin/Release/*.nupkg -k $NUGET_AUTH_TOKEN -s https://nuget.pkg.github.com/Sensor-Electronic-Technology/index.json
         env:
-          NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY }}
+          NUGET_AUTH_TOKEN: ${{ secrets.NUGET_TOKEN }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
