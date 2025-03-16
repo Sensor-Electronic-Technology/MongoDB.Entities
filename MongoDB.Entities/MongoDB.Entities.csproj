@@ -1,9 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-
-        <Version>24.1.1</Version>
-
+        <Version>0.0.0.1</Version>
         <TargetFramework>net9.0</TargetFramework>
         <RootNamespace>MongoDB.Entities</RootNamespace>
         <AssemblyName>MongoDB.Entities</AssemblyName>
