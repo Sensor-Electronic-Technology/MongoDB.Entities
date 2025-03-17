@@ -18,6 +18,16 @@ public static partial class Extensions
     /// <param name="cancellation">An optional cancellation token</param>
     public static Task SaveAsync<T>(this T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : IEntity
         => DB.SaveAsync(entity, session, cancellation);
+    
+    /// <summary>
+    /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
+    /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
+    /// </summary>
+    /// <param name="entity"></param>
+    /// <param name="session">An optional session if using within a transaction</param>
+    /// <param name="cancellation">An optional cancellation token</param>
+    public static Task SaveMigrateAsync<T>(this T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : Entity
+        => DB.SaveMigrateAsync(entity, session, cancellation);
 
     /// <summary>
     /// Saves a batch of complete entities replacing existing ones or creating new ones if they do not exist.

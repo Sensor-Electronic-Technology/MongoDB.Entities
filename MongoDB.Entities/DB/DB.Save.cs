@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace MongoDB.Entities;
 
@@ -13,6 +14,32 @@ public static partial class DB
 {
     static readonly BulkWriteOptions _unOrdBlkOpts = new() { IsOrdered = false };
     static readonly UpdateOptions _updateOptions = new() { IsUpsert = true };
+    
+    /// <summary>
+    /// Saves a complete entity and migrates  the custom fields, replacing an existing entity or creating a new one if it does not exist.
+    /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
+    /// </summary>
+    /// <typeparam name="T">Any class that implements IEntity</typeparam>
+    /// <param name="entity">The instance to persist</param>
+    /// <param name="session">An optional session if using within a transaction</param>
+    /// <param name="cancellation">And optional cancellation token</param>
+    public static async Task SaveMigrateAsync<T>(T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : Entity {
+        var filter = Builders<T>.Filter.Eq(Cache<T>.IdPropName, entity.GetId());
+        entity=await MigrateEntity(entity,cancellation:cancellation);
+        if (PrepAndCheckIfInsert(entity)) {
+            if (session == null) {
+                await Collection<T>().InsertOneAsync(entity, null, cancellation);
+            } else {
+                await Collection<T>().InsertOneAsync(session, entity, null, cancellation);
+            }
+        } else {
+            if (session == null) {
+                await Collection<T>().ReplaceOneAsync(filter, entity, new ReplaceOptions { IsUpsert = true }, cancellation);
+            } else {
+                await Collection<T>().ReplaceOneAsync(session, filter, entity, new ReplaceOptions { IsUpsert = true }, cancellation);
+            }
+        }
+    }
 
     /// <summary>
     /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
@@ -25,7 +52,6 @@ public static partial class DB
     public static Task SaveAsync<T>(T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : IEntity
     {
         var filter = Builders<T>.Filter.Eq(Cache<T>.IdPropName, entity.GetId());
-
         return PrepAndCheckIfInsert(entity)
                    ? session == null
                          ? Collection<T>().InsertOneAsync(entity, null, cancellation)

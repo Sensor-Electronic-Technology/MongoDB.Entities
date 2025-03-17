@@ -17,16 +17,53 @@ using CollectionPropertyVariable = MongoDB.Entities.CollectionPropertyVariable;
 using VariableType = MongoDB.Entities.VariableType;
 
 await DB.InitAsync("epi_system", "172.20.3.41");
+var rand = new Random();
+var now=DateTime.Now;
+EpiRun run = new EpiRun() {
+    WaferId = "B09-9998-96",
+    RunNumber = "9998",
+    PocketNumber = "97",
+    RunTypeId = "Prod",
+    SystemId = "B09",
+};
 
+var quickTestData = new QuickTest() {
+    WaferId = run.WaferId,
+    TimeStamp = now,
+    InitialMeasurements = new List<QtMeasurement>() {
+        GenerateQtMeasurement(rand, "A", now),
+        GenerateQtMeasurement(rand, "B", now),
+        GenerateQtMeasurement(rand, "C", now),
+        GenerateQtMeasurement(rand, "L", now),
+        GenerateQtMeasurement(rand, "R", now),
+        GenerateQtMeasurement(rand, "T", now),
+        GenerateQtMeasurement(rand, "G", now)
+    },
+    FinalMeasurements = new List<QtMeasurement>() {
+        GenerateQtMeasurement(rand, "A", now),
+        GenerateQtMeasurement(rand, "B", now),
+        GenerateQtMeasurement(rand, "C", now),
+        GenerateQtMeasurement(rand, "L", now),
+        GenerateQtMeasurement(rand, "R", now),
+        GenerateQtMeasurement(rand, "T", now),
+        GenerateQtMeasurement(rand, "G", now)
+    }
+};
+await run.SaveAsync();
+await quickTestData.SaveAsync();
+run.QuickTest= quickTestData.ToReference();
+quickTestData.EpiRun = run.ToReference();
+await run.SaveMigrateAsync();
+await quickTestData.SaveMigrateAsync();
 
 //await UndoRedoAll();
-await BuildMigration2();
+/*await BuildMigration2();
 await DB.MigrateFields();
 await BuilderMigration3();
 await DB.MigrateFields();
 Console.WriteLine("Migration 3 created, Migrating...");
 
-Console.WriteLine("Check database");
+Console.WriteLine("Check database");*/
 //await UndoMigration();
 
 /*var filter=new Filter() {

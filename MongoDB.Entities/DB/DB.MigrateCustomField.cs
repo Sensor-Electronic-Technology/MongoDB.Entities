@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
+using System.Threading;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using NCalcExtensions;
@@ -152,7 +154,56 @@ public static partial class DB {
         await collection.BulkWriteAsync(updates);
         await migration.DeleteAsync();
     }
+    public static async Task<TEntity> MigrateEntity<TEntity>(TEntity entity,CancellationToken cancellation = default) where TEntity : Entity {
+        var typeConfig=await Find<TypeConfiguration>().Match(e => e.CollectionName == CollectionName<TEntity>())
+                                                      .ExecuteFirstAsync(cancellation);
+        if (typeConfig == null) {
+            return entity;
+        }
+        
+        if (!typeConfig.Migrations.Any()) { 
+            return entity;
+        }
+        var migrations=await typeConfig.Migrations.ChildrenQueryable().ToListAsync(cancellationToken: cancellation);
 
+        if (migrations.Count <= 0) {
+            return entity;
+        }
+        
+        var entityDoc=entity.ToBsonDocument();
+            //Check if AdditionalData is null, create new if null
+            var doc=entityDoc.GetElement("AdditionalData").Value.ToBsonDocument();
+            if (doc.Contains("_csharpnull")) {
+                doc = new BsonDocument();
+            }
+            foreach (var migration in migrations) {
+                foreach (var op in migration.UpOperations) {
+                    if (op is AddFieldOperation addField) {
+                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == addField.Field.FieldName) == null) {
+                            await AddField(typeConfig,addField.Field,doc,entityDoc);
+                        }
+                    }else if (op is DropFieldOperation dropField) {
+                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == dropField.Field.FieldName) != null) {
+                            doc.Remove(dropField.Field.FieldName);
+                        }
+                    }else if (op is AlterFieldOperation alterField) {
+                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == alterField.OldField.FieldName) != null) {
+                            doc.Remove(alterField.OldField.FieldName);
+                            await AddField(typeConfig,alterField.Field,doc,entityDoc);
+                        } else {
+                            await AddField(typeConfig,alterField.Field,doc,entityDoc);
+                        }
+                    }
+                }
+            }
+            entityDoc["AdditionalData"] = doc;
+            entity= BsonSerializer.Deserialize<TEntity>(entityDoc);
+            return entity;
+    }
+    
+    public static async Task TestToBson<TEntity>(TEntity entity,CancellationToken cancellation = default) where TEntity : Entity {
+        Console.WriteLine(entity.ToBsonDocument());
+    }
     public static async Task AddField(TypeConfiguration typeConfig, Field field, BsonDocument doc,BsonDocument entity) {
         if (field is ObjectField oField) {
             var objDoc=new BsonDocument();

@@ -9,7 +9,10 @@ namespace MongoDB.Entities;
 
 
 [BsonDiscriminator(RootClass = true),
- BsonKnownTypes(typeof(ObjectField), typeof(ValueField), typeof(SelectionField), typeof(CalculatedField))]
+ BsonKnownTypes(typeof(ObjectField), 
+     typeof(ValueField), 
+     typeof(SelectionField), 
+     typeof(CalculatedField))]
 public class Field:IEquatable<Field> {
     public string FieldName { get; set; } = string.Empty;
     public BsonType BsonType { get; set; }

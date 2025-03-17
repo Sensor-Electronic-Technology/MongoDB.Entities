@@ -4,8 +4,6 @@ using MongoDB.Entities;
 
 namespace ConsoleTesting;
 
-
-
 [Collection("epi_runs")]
 public class EpiRun : Entity,ICreatedOn {
     public DateTime TimeStamp { get; set; }
@@ -64,17 +62,18 @@ public class XrdData : Entity,ICreatedOn {
     public DateTime CreatedOn { get; set; }
 }
 
-public class QtMeasurement {
+public class QtMeasurement:IEmbeddedEntity {
     public DateTime TimeStamp { get; set; }
     public string Area { get; set; }
     public double Power { get; set; }
     public double Voltage { get; set; }
     public double Current { get; set; }
     public double Wavelength { get; set; }
+    public BsonDocument AdditionalData { get; set; }
 }
 
 
-public class XrdMeasurement {
+public class XrdMeasurement:IEmbeddedEntity {
     public DateTime TimeStamp { get; set; }
     public string XrdArea { get; set; }
     public double pGan { get; set; }
@@ -87,7 +86,7 @@ public class XrdMeasurement {
     public double dOmega { get; set; }
     public double FHWM102 { get; set; }
 
-
+    public BsonDocument AdditionalData { get; set; }
 }
 
 [Collection("run_monitoring")]
@@ -105,10 +104,4 @@ public class Monitoring:Entity {
                    o.Unique = true;
                });
     }
-}
-
-public class TestEntity  {
-    public ObjectId _id { get; set; }
-    public string Name { get; set; }
-    public BsonDocument AdditionalData { get; set; } = new BsonDocument();
 }

@@ -1,4 +1,6 @@
-﻿namespace MongoDB.Entities;
+﻿using MongoDB.Bson;
+
+namespace MongoDB.Entities;
 
 /// <summary>
 /// The contract for Entity classes
