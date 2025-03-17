@@ -1,22 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <Version>0.0.2-alpha</Version>
+        <Version>0.0.3-alpha</Version>
         <TargetFramework>net9.0</TargetFramework>
         <RootNamespace>MongoDB.Entities</RootNamespace>
         <AssemblyName>MongoDB.Entities</AssemblyName>
-        <!--       <Authors>Đĵ ΝιΓΞΗΛψΚ</Authors>
-               <Description>A data access library for MongoDB with an elegant api, LINQ support and built-in entity relationship management.</Description>
-               <PackageProjectUrl>https://mongodb-entities.com</PackageProjectUrl>
-               <Copyright>Đĵ ΝιΓΞΗΛψΚ</Copyright>
-               <PackageId>MongoDB.Entities</PackageId>
-               <Product>MongoDB.Entities</Product>
-               <RepositoryUrl>https://github.com/dj-nitehawk/MongoDB.Entities.git</RepositoryUrl>
-               <RepositoryType>git</RepositoryType>
-               <PublishRepositoryUrl>true</PublishRepositoryUrl>
-               <PackageLicenseExpression>MIT</PackageLicenseExpression>
-               <PackageIcon>icon.png</PackageIcon>
-               <PackageReadmeFile>README.md</PackageReadmeFile>-->
+<!--    <Authors>Đĵ ΝιΓΞΗΛψΚ</Authors>
+       <Description>A data access library for MongoDB with an elegant api, LINQ support and built-in entity relationship management.</Description>
+       <PackageProjectUrl>https://mongodb-entities.com</PackageProjectUrl>
+       <Copyright>Đĵ ΝιΓΞΗΛψΚ</Copyright>
+       <PackageId>MongoDB.Entities</PackageId>
+       <Product>MongoDB.Entities</Product>
+       
+       <RepositoryType>git</RepositoryType>
+       <PublishRepositoryUrl>true</PublishRepositoryUrl>
+       <PackageLicenseExpression>MIT</PackageLicenseExpression>
+       <PackageIcon>icon.png</PackageIcon>
+       <PackageReadmeFile>README.md</PackageReadmeFile>-->
+        <PackageId>SETi.MongoDB.Entities</PackageId>
+        <Product>SETi.MongoDB.Entities</Product>
+        <RepositoryType>git</RepositoryType>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <RepositoryUrl>https://github.com/Sensor-Electronic-Technology/MongoDB.Entities.git</RepositoryUrl>
         <PackageTags>mongodb mongodb-orm mongodb-repo mongodb-repository entities nosql orm linq netcore repository aspnetcore dotnetstandard database persistance dal repo</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <LangVersion>latest</LangVersion>
