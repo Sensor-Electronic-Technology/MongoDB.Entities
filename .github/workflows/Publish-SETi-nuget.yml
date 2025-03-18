@@ -21,13 +21,13 @@ jobs:
       - name: Publish To Nuget
         run: dotnet nuget push MongoDB.Entities/bin/Release/*.nupkg --skip-duplicate
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: changelog.md
-        env:
-          GITHUB_TOKEN: ${{secrets.RELEASE_ACTION_TOKEN}}
+      # - name: Create Release
+      #   uses: softprops/action-gh-release@v2
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   with:
+      #     files: changelog.md
+      #   env:
+      #     GITHUB_TOKEN: ${{secrets.RELEASE_ACTION_TOKEN}}
         # uses: softprops/action-gh-release@v1
         # if: ${{ !contains(github.ref, 'beta') }}
         # with:
