@@ -12,6 +12,7 @@ public class DocumentMigration : Entity,IDocumentMigration,ICreatedOn {
     public int MigrationNumber { get; set; }
     public bool IsMigrated { get; set; }
     public One<TypeConfiguration>? TypeConfiguration { get; set; }
+    public DocumentVersion Version { get; set; }
     public List<FieldOperation> UpOperations { get; set; } = [];
     public List<FieldOperation> DownOperations { get; set; } = [];
     public void Build(MigrationBuilder builder) {

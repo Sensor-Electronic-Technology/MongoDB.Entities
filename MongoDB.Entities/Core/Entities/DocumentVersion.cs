@@ -51,6 +51,22 @@ public struct DocumentVersion : IComparable<DocumentVersion> {
         return new DocumentVersion(-1, 0, 0);
     }
 
+    public DocumentVersion IncrementMajor() {
+        this.Major=this.Major<0 ? 0:this.Major;
+        this.Major++;
+        return this;
+    }
+
+    public DocumentVersion IncrementMinor() {
+        this.Minor++;
+        return this;
+    }
+
+    public DocumentVersion IncrementRevision() {
+        this.Revision++;
+        return this;
+    }
+
     public static implicit operator DocumentVersion(string version) {
         return new DocumentVersion(version);
     }

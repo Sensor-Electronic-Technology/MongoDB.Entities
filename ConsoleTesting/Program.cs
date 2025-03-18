@@ -16,47 +16,13 @@ using FastCloner;
 using CollectionPropertyVariable = MongoDB.Entities.CollectionPropertyVariable;
 using VariableType = MongoDB.Entities.VariableType;
 
-await DB.InitAsync("epi_system", "172.20.3.41");
-var rand = new Random();
-var now=DateTime.Now;
-EpiRun run = new EpiRun() {
-    WaferId = "B09-9998-96",
-    RunNumber = "9998",
-    PocketNumber = "97",
-    RunTypeId = "Prod",
-    SystemId = "B09",
-};
+Console.WriteLine("Initializing Database...");
+await DB.InitAsync("epi_system", "172.20.3.41",assemblies:typeof(EpiRun).Assembly);
+await UndoRedoAll();
 
-var quickTestData = new QuickTest() {
-    WaferId = run.WaferId,
-    TimeStamp = now,
-    InitialMeasurements = new List<QtMeasurement>() {
-        GenerateQtMeasurement(rand, "A", now),
-        GenerateQtMeasurement(rand, "B", now),
-        GenerateQtMeasurement(rand, "C", now),
-        GenerateQtMeasurement(rand, "L", now),
-        GenerateQtMeasurement(rand, "R", now),
-        GenerateQtMeasurement(rand, "T", now),
-        GenerateQtMeasurement(rand, "G", now)
-    },
-    FinalMeasurements = new List<QtMeasurement>() {
-        GenerateQtMeasurement(rand, "A", now),
-        GenerateQtMeasurement(rand, "B", now),
-        GenerateQtMeasurement(rand, "C", now),
-        GenerateQtMeasurement(rand, "L", now),
-        GenerateQtMeasurement(rand, "R", now),
-        GenerateQtMeasurement(rand, "T", now),
-        GenerateQtMeasurement(rand, "G", now)
-    }
-};
-await run.SaveAsync();
-await quickTestData.SaveAsync();
-run.QuickTest= quickTestData.ToReference();
-quickTestData.EpiRun = run.ToReference();
-await run.SaveMigrateAsync();
-await quickTestData.SaveMigrateAsync();
 
-//await UndoRedoAll();
+
+
 /*await BuildMigration2();
 await DB.MigrateFields();
 await BuilderMigration3();
@@ -66,45 +32,10 @@ Console.WriteLine("Migration 3 created, Migrating...");
 Console.WriteLine("Check database");*/
 //await UndoMigration();
 
-/*var filter=new Filter() {
-    FieldName = nameof(QtMeasurement.Power),
-    ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-    LogicalOperator = LogicalOperator.And,
-    Value = 1100,
-    Filters = new List<Filter>() {
-        new() {
-            FieldName = nameof(QtMeasurement.Power),
-            ComparisonOperator = ComparisonOperator.GreaterThan,
-            LogicalOperator = LogicalOperator.And,
-            Value = 500
-        },
-        new() {
-            FieldName = "Wavelength",
-            ComparisonOperator = ComparisonOperator.GreaterThanOrEqual,
-            LogicalOperator = LogicalOperator.And,
-            Value = 270,
-            Filters = new List<Filter>() {
-                new() {
-                    FieldName = "Wavelength",
-                    ComparisonOperator = ComparisonOperator.LessThanOrEqual,
-                    LogicalOperator = LogicalOperator.Or,
-                    Value = 279
-                }
-            }
-        }
-    }
-};
-Console.WriteLine($"Greater: {filter.ComparisonOperator.Value}");
-Console.WriteLine($"And: {filter.LogicalOperator.Value}");
-Console.WriteLine(filter.ToString());*/
 
 async Task UndoRedoAll() {
     Console.WriteLine("Dropping database...");
-    await DB.DropCollectionAsync<EpiRun>();
-    await DB.DropCollectionAsync<QuickTest>();
-    await DB.DropCollectionAsync<XrdData>();
-    await DB.DropCollectionAsync<DocumentMigration>();
-    await DB.DropCollectionAsync<TypeConfiguration>();
+    await DropAllCollections();
     Console.WriteLine("Database dropped, generating data...");
     await GenerateEpiData();
     Console.WriteLine("Data generated, Adding Migration 1...");
@@ -115,15 +46,66 @@ async Task UndoRedoAll() {
     await BuildMigration2();
     Console.WriteLine("Migration 2 created, Migrating...");
     await DB.MigrateFields();
-    Console.WriteLine("Check database, press any key to undo migration 2");
+    /*Console.WriteLine("Check database, press any key to undo migration 2");
     Console.ReadKey();
     await UndoMigration();
     Console.WriteLine("Check database, press any key to add migration 3");
     Console.ReadKey();
     await BuilderMigration3();
     Console.WriteLine("Migration 3 created, Migrating...");
-    await DB.MigrateFields();
+    await DB.MigrateFields();*/
     Console.WriteLine("Check database");
+}
+
+async Task DropAllCollections() {
+    await DB.DropCollectionAsync<EpiRun>();
+    await DB.DropCollectionAsync<QuickTest>();
+    await DB.DropCollectionAsync<XrdData>();
+    await DB.DropCollectionAsync<DocumentMigration>();
+    await DB.DropCollectionAsync<TypeConfiguration>();
+}
+
+
+
+async Task MigrateOnInsert() {
+    var rand = new Random();
+    var now=DateTime.Now;
+    EpiRun run = new EpiRun() {
+        WaferId = "B09-9998-96",
+        RunNumber = "9998",
+        PocketNumber = "97",
+        RunTypeId = "Prod",
+        SystemId = "B09",
+    };
+
+    var quickTestData = new QuickTest() {
+        WaferId = run.WaferId,
+        TimeStamp = now,
+        InitialMeasurements = new List<QtMeasurement>() {
+            GenerateQtMeasurement(rand, "A", now),
+            GenerateQtMeasurement(rand, "B", now),
+            GenerateQtMeasurement(rand, "C", now),
+            GenerateQtMeasurement(rand, "L", now),
+            GenerateQtMeasurement(rand, "R", now),
+            GenerateQtMeasurement(rand, "T", now),
+            GenerateQtMeasurement(rand, "G", now)
+        },
+        FinalMeasurements = new List<QtMeasurement>() {
+            GenerateQtMeasurement(rand, "A", now),
+            GenerateQtMeasurement(rand, "B", now),
+            GenerateQtMeasurement(rand, "C", now),
+            GenerateQtMeasurement(rand, "L", now),
+            GenerateQtMeasurement(rand, "R", now),
+            GenerateQtMeasurement(rand, "T", now),
+            GenerateQtMeasurement(rand, "G", now)
+        }
+    };
+    await run.SaveAsync();
+    await quickTestData.SaveAsync();
+    run.QuickTest= quickTestData.ToReference();
+    quickTestData.EpiRun = run.ToReference();
+    await run.SaveMigrateAsync();
+    await quickTestData.SaveMigrateAsync();
 }
 
 void TestExpressionCheck() {
@@ -253,11 +235,25 @@ async Task BuilderMigration3() {
 
 
 async Task BuildMigration2() {
-    var migrationNumber = await DB.Collection<DocumentMigration>()
+    /*var migrationNumber = await DB.Collection<DocumentMigration>()
                                   .Find(_ => true)
                                   .SortByDescending(e => e.MigrationNumber)
-                                  .Project(e => e.MigrationNumber)
-                                  .FirstOrDefaultAsync();
+                                  .Project<(int,DocumentVersion)>(e=>new (e.MigrationNumber,e.Version))
+                                  .FirstOrDefaultAsync();*/
+    var proj=Builders<DocumentMigration>.Projection.Expression(e => new { e.MigrationNumber, e.Version });
+    var last = await DB.Collection<DocumentMigration>()
+                       .Find(_ => true)
+                       .SortByDescending(e => e.MigrationNumber)
+                       .Project(proj)
+                       .FirstOrDefaultAsync();
+    DocumentVersion lastVersion = DocumentVersion.Empty();
+    int migrationNumber=0;
+
+    if (last != null) {
+        lastVersion = last.Version;
+        migrationNumber=last.MigrationNumber;
+    }
+    
     var collectionName = DB.CollectionName<QuickTest>();
     var typeConfig = await DB.Collection<TypeConfiguration>()
                              .Find(e => e.CollectionName == collectionName)
@@ -312,6 +308,7 @@ async Task BuildMigration2() {
         MigrationBuilder builder = new MigrationBuilder();
         builder.AlterField(updatedField, field);
         var migration = builder.Build();
+        migration.Version = lastVersion.IncrementMajor();
         migration.MigrationNumber = ++migrationNumber;
         migration.TypeConfiguration = typeConfig.ToReference();
         await migration.SaveAsync();
@@ -423,11 +420,30 @@ async Task CheckMigrationConflicts() {
 
 async Task BuildMigration() {
     //DB.Find<DocumentMigration, int>().Match(_ => true).Project(e => e.MigrationNumber;
-    var migrationNumber = await DB.Collection<DocumentMigration>()
+    /*var migrationNumber = await DB.Collection<DocumentMigration>()
                                   .Find(_ => true)
                                   .SortByDescending(e => e.MigrationNumber)
                                   .Project(e => e.MigrationNumber)
                                   .FirstOrDefaultAsync();
+    var docVersion = await DB.Collection<DocumentMigration>()
+                                  .Find(_ => true)
+                                  .SortByDescending(e => e.MigrationNumber)
+                                  .Project(e => e.Version)
+                                  .FirstOrDefaultAsync();*/
+    var proj=Builders<DocumentMigration>.Projection.Expression(e => new { e.MigrationNumber, e.Version });
+    var last = await DB.Collection<DocumentMigration>()
+                       .Find(_ => true)
+                       .SortByDescending(e => e.MigrationNumber)
+                       .Project(proj)
+                       .FirstOrDefaultAsync();
+    DocumentVersion lastVersion = DocumentVersion.Empty();
+    int migrationNumber=0;
+
+    if (last != null) {
+        lastVersion = last.Version;
+        migrationNumber=last.MigrationNumber;
+    }
+    
     Console.WriteLine("Migration Number: " + migrationNumber);
     
     MigrationBuilder builder = new MigrationBuilder();
@@ -526,9 +542,11 @@ async Task BuildMigration() {
     TypeConfiguration typeConfig = new TypeConfiguration() {
         CollectionName = DB.CollectionName<QuickTest>(),
         DatabaseName = DB.DatabaseName<QuickTest>(),
+        TypeName = typeof(QuickTest).AssemblyQualifiedName ?? "",
     };
     var migration = builder.Build();
     migration.MigrationNumber = ++migrationNumber;
+    migration.Version = lastVersion.IncrementMajor();
     await migration.SaveAsync();
     await typeConfig.SaveAsync();
     migration.TypeConfiguration = typeConfig.ToReference();
@@ -859,7 +877,7 @@ async Task GenerateEpiData() {
     List<QuickTest> quickTests = [];
     List<XrdData> xrdMeasurementData = [];
 
-    for (int i = 1; i <= 100; i++) {
+    for (int i = 1; i <= 10; i++) {
         for (int x = 1; x <= 10; x++) {
             EpiRun run = new EpiRun() {
                 RunTypeId = (rand.NextDouble() > .5) ? "Prod" : "Rnd",

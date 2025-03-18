@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
@@ -84,5 +85,10 @@ public static partial class DB
                 : db.DropCollectionAsync(session, collName));
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        if (typeof(T) == typeof(TypeConfiguration)) {
+            Cache<T>.Watchers.Clear();
+            InitTypeConfigWatcher();
+        }
     }
 }

@@ -26,7 +26,7 @@ public static partial class Extensions
     /// <param name="entity"></param>
     /// <param name="session">An optional session if using within a transaction</param>
     /// <param name="cancellation">An optional cancellation token</param>
-    public static Task SaveMigrateAsync<T>(this T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : Entity
+    public static Task SaveMigrateAsync<T>(this T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : DocumentEntity
         => DB.SaveMigrateAsync(entity, session, cancellation);
 
     /// <summary>

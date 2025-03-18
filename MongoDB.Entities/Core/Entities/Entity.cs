@@ -13,6 +13,24 @@ public abstract class Entity : IEntity
     /// </summary>
     [BsonId, AsObjectId]
     public string ID { get; set; } = null!;
+
+    /// <summary>
+    /// Override this method in order to control the generation of IDs for new entities.
+    /// </summary>
+    public virtual object GenerateNewID()
+        => ObjectId.GenerateNewId().ToString()!;
+
+    /// <inheritdoc />
+    public virtual bool HasDefaultID()
+        => string.IsNullOrEmpty(ID);
+}
+
+public abstract class DocumentEntity : IEntity {
+    /// <summary>
+    /// This property is auto managed. A new ID will be assigned for new entities upon saving.
+    /// </summary>
+    [BsonId, AsObjectId]
+    public string ID { get; set; } = null!;
     
     public DocumentVersion Version { get; set; }
     

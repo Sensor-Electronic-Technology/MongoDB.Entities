@@ -5,7 +5,7 @@ using MongoDB.Entities;
 namespace ConsoleTesting;
 
 [Collection("epi_runs")]
-public class EpiRun : Entity,ICreatedOn {
+public class EpiRun : DocumentEntity,ICreatedOn,IModifiedOn {
     public DateTime TimeStamp { get; set; }
     public string WaferId { get; set; }
     public string RunTypeId { get; set; }
@@ -14,7 +14,6 @@ public class EpiRun : Entity,ICreatedOn {
     public string RunNumber { get; set; }
     public string PocketNumber { get; set; }
     public Many<Monitoring,EpiRun> EpiRunMonitoring { get; set; }
-    
     public One<QuickTest> QuickTest { get; set; }
     public One<XrdData> XrdData { get; set; }
     
@@ -22,44 +21,68 @@ public class EpiRun : Entity,ICreatedOn {
         this.InitOneToMany(()=>this.EpiRunMonitoring);
     }
 
+    static EpiRun() {
+        DB.Index<EpiRun>()
+          .Key(e => e.WaferId, KeyType.Descending)
+          .Option(o => o.Unique = true)
+          .CreateAsync()
+          .Wait();
+        DB.Index<EpiRun>()
+          .Key(e=>e.RunNumber,KeyType.Descending)
+          .Option(o=>o.Unique = false)
+          .CreateAsync()
+          .Wait();
+        DB.Index<EpiRun>()
+          .Key(e=>e.SystemId,KeyType.Descending)
+          .Option(o=>o.Unique = false)
+          .CreateAsync()
+          .Wait();
+        
+        DB.Index<EpiRun>()
+          .Key(e=>e.PocketNumber,KeyType.Descending)
+          .Option(o=>o.Unique = false)
+          .CreateAsync()
+          .Wait();
+    }
     public DateTime CreatedOn { get; set; }
+    public DateTime ModifiedOn { get; set; }
 }
 
 [Collection("quick_tests")]
-public class QuickTest:Entity,ICreatedOn {
+public class QuickTest:DocumentEntity,ICreatedOn,IModifiedOn {
     public string WaferId { get; set; }
     public DateTime TimeStamp { get; set; }
     public One<EpiRun> EpiRun { get; set; }
     
     public ICollection<QtMeasurement> InitialMeasurements { get; set; } = new ObservableCollection<QtMeasurement>();
     public ICollection<QtMeasurement> FinalMeasurements { get; set; } = new ObservableCollection<QtMeasurement>();
-    public QuickTest() {
+    
+
+    static QuickTest() {
         DB.Index<QuickTest>()
           .Key(e=>e.WaferId,KeyType.Descending)
-          .Option(
-              o => {
-                  o.Unique = true;
-              });
+          .Option(o=>o.Unique=true)
+          .CreateAsync().Wait();
     }
-
     public DateTime CreatedOn { get; set; }
+    public DateTime ModifiedOn { get; set; }
 }
 
 [Collection("xrd_data")]
-public class XrdData : Entity,ICreatedOn {
+public class XrdData : DocumentEntity,ICreatedOn,IModifiedOn {
     public One<EpiRun> EpiRun { get; set; }
     public string WaferId { get; set; }
     public ICollection<XrdMeasurement> XrdMeasurements { get; set; }
-    public XrdData() {
+
+    static XrdData() {
         DB.Index<XrdData>()
           .Key(e=>e.WaferId,KeyType.Descending)
-          .Option(
-              o => {
-                  o.Unique = true;
-              });
+          .Option(o=>o.Unique=true)
+          .CreateAsync().Wait();    
     }
 
     public DateTime CreatedOn { get; set; }
+    public DateTime ModifiedOn { get; set; }
 }
 
 public class QtMeasurement:IEmbeddedEntity {
@@ -90,18 +113,17 @@ public class XrdMeasurement:IEmbeddedEntity {
 }
 
 [Collection("run_monitoring")]
-public class Monitoring:Entity {
+public class Monitoring:DocumentEntity,ICreatedOn,IModifiedOn {
     public One<EpiRun> EpiRun { get; set; }
     public string WaferId { get; set; }
     public double Weight1 { get; set; }
     public double Temperature { get; set; }
-
-    public Monitoring() {
-         DB.Index<Monitoring>()
-           .Key(e=>e.WaferId,KeyType.Descending)
-           .Option(
-               o => {
-                   o.Unique = true;
-               });
+    static Monitoring() {
+        DB.Index<Monitoring>()
+          .Key(e => e.WaferId, KeyType.Descending)
+          .Option(o => o.Unique = true)
+          .CreateAsync().Wait();
     }
+    public DateTime CreatedOn { get; set; }
+    public DateTime ModifiedOn { get; set; }
 }

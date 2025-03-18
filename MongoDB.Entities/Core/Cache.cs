@@ -10,12 +10,12 @@ using MongoDB.Driver;
 
 namespace MongoDB.Entities;
 
-static class Cache<T> where T : IEntity
-{
+static class Cache<T> where T : IEntity {
     internal static string DbName { get; private set; } = null!;
     internal static IMongoDatabase Database { get; private set; } = null!;
     internal static IMongoCollection<T> Collection { get; private set; } = null!;
     internal static string CollectionName { get; private set; } = null!;
+    internal static TypeConfiguration? TypeConfiguration { get; private set; }
     internal static ConcurrentDictionary<string, Watcher<T>> Watchers { get; private set; } = null!;
     internal static bool HasCreatedOn { get; private set; }
     internal static bool HasModifiedOn { get; private set; }
@@ -31,28 +31,23 @@ static class Cache<T> where T : IEntity
     static PropertyInfo[] _updatableProps = [];
     static ProjectionDefinition<T>? _requiredPropsProjection;
 
-    static Cache()
-    {
+    static Cache() {
         Initialize();
         DB.DefaultDbChanged += Initialize;
     }
 
-    static void Initialize()
-    {
+    static void Initialize() {
         var type = typeof(T);
 
         var propertyInfo = type.GetIdPropertyInfo();
 
-        if (propertyInfo != null)
-        {
+        if (propertyInfo != null) {
             IdPropName = propertyInfo.Name;
             IdExpression = SelectIdExpression(propertyInfo);
             IdSelector = IdExpression.Compile();
             IdGetter = type.GetterForProp(IdPropName);
             IdSetter = type.SetterForProp(IdPropName);
-        }
-        else
-        {
+        } else {
             throw new InvalidOperationException(
                 $"Type {type.FullName} must specify an Identity property. '_id', 'Id', 'ID', or [BsonId] annotation expected!");
         }
@@ -60,6 +55,7 @@ static class Cache<T> where T : IEntity
         Database = TypeMap.GetDatabase(type);
         DbName = Database.DatabaseNamespace.DatabaseName;
 
+        //Get/Set collection name
         var collAttrb = type.GetCustomAttribute<CollectionAttribute>(false);
 
         CollectionName = collAttrb != null ? collAttrb.Name : type.Name;
@@ -72,6 +68,7 @@ static class Cache<T> where T : IEntity
 
         Watchers = new();
 
+        //Get CreatedOn and ModifiedOn interfaces
         var interfaces = type.GetInterfaces();
         HasCreatedOn = interfaces.Any(i => i == typeof(ICreatedOn));
         HasModifiedOn = interfaces.Any(i => i == typeof(IModifiedOn));
@@ -89,37 +86,37 @@ static class Cache<T> where T : IEntity
             p =>
                 p.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), false) ||
                 p.IsDefined(typeof(BsonIgnoreIfNullAttribute), false));
-
-        try
-        {
+        
+        try {
             ModifiedByProp = _updatableProps.SingleOrDefault(
                 p =>
                     p.PropertyType == typeof(ModifiedBy) ||
                     p.PropertyType.IsSubclassOf(typeof(ModifiedBy)));
-        }
-        catch (InvalidOperationException)
-        {
+        } catch (InvalidOperationException) {
             throw new InvalidOperationException("Multiple [ModifiedBy] properties are not allowed on entities!");
         }
     }
 
-    internal static IEnumerable<PropertyInfo> UpdatableProps(T entity)
-    {
+    static void UpdateTypeConfiguration(TypeConfiguration typeConfiguration) {
+        TypeConfiguration = typeConfiguration;
+    }
+
+    internal static IEnumerable<PropertyInfo> UpdatableProps(T entity) {
         return HasIgnoreIfDefaultProps
                    ? _updatableProps.Where(
                        p =>
-                           !(p.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), false) && p.GetValue(entity) == default) &&
+                           !(p.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), false) &&
+                             p.GetValue(entity) == default) &&
                            !(p.IsDefined(typeof(BsonIgnoreIfNullAttribute), false) && p.GetValue(entity) == null))
                    : _updatableProps;
     }
 
-    internal static ProjectionDefinition<T, TProjection> CombineWithRequiredProps<TProjection>(ProjectionDefinition<T, TProjection> userProjection)
-    {
+    internal static ProjectionDefinition<T, TProjection> CombineWithRequiredProps<TProjection>(
+        ProjectionDefinition<T, TProjection> userProjection) {
         if (userProjection == null)
             throw new InvalidOperationException("Please use .Project() method before .IncludeRequiredProps()");
 
-        if (_requiredPropsProjection is null)
-        {
+        if (_requiredPropsProjection is null) {
             _requiredPropsProjection = "{_id:1}";
 
             var props = typeof(T)
@@ -127,12 +124,14 @@ static class Cache<T> where T : IEntity
                         .Where(p => p.IsDefined(typeof(BsonRequiredAttribute), false));
 
             if (!props.Any())
-                throw new InvalidOperationException("Unable to find any entity properties marked with [BsonRequired] attribute!");
+                throw new InvalidOperationException(
+                    "Unable to find any entity properties marked with [BsonRequired] attribute!");
 
-            foreach (var p in props)
-            {
+            foreach (var p in props) {
                 var attr = p.GetCustomAttribute<FieldAttribute>();
-                _requiredPropsProjection = attr is null ? _requiredPropsProjection.Include(p.Name) : _requiredPropsProjection.Include(attr.ElementName);
+                _requiredPropsProjection = attr is null
+                                               ? _requiredPropsProjection.Include(p.Name)
+                                               : _requiredPropsProjection.Include(attr.ElementName);
             }
         }
 
@@ -142,8 +141,7 @@ static class Cache<T> where T : IEntity
         return Builders<T>.Projection.Combine(_requiredPropsProjection, userProj);
     }
 
-    static Expression<Func<T, object?>> SelectIdExpression(PropertyInfo idProp)
-    {
+    static Expression<Func<T, object?>> SelectIdExpression(PropertyInfo idProp) {
         var parameter = Expression.Parameter(typeof(T), "t");
         var property = Expression.Property(parameter, idProp);
         Expression conversion = Expression.Convert(property, typeof(object));

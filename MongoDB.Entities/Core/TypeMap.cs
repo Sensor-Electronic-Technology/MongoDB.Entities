@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using MongoDB.Driver;
 
 namespace MongoDB.Entities;
@@ -8,6 +10,7 @@ static class TypeMap
 {
     static readonly ConcurrentDictionary<Type, IMongoDatabase> _typeToDbMap = new();
     static readonly ConcurrentDictionary<Type, string> _typeToCollMap = new();
+    static readonly ConcurrentDictionary<Type, TypeConfiguration?> _typeToCollectionMap = new();
 
     internal static void AddCollectionMapping(Type entityType, string collectionName)
         => _typeToCollMap[entityType] = collectionName;
@@ -26,7 +29,16 @@ static class TypeMap
     {
         _typeToDbMap.Clear();
         _typeToCollMap.Clear();
+        _typeToCollectionMap.Clear();
     }
+
+    internal static TypeConfiguration? GetTypeConfiguration(Type entityType) {
+        _typeToCollectionMap.TryGetValue(entityType, out var configuration);
+        return configuration;
+    }
+
+    internal static void AddUpdateTypeConfiguration(Type entityType, TypeConfiguration? typeConfiguration) =>
+        _typeToCollectionMap[entityType] = typeConfiguration;
 
     internal static IMongoDatabase GetDatabase(Type entityType)
     {

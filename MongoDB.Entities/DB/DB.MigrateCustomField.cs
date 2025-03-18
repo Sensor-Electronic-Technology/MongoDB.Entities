@@ -17,10 +17,12 @@ namespace MongoDB.Entities;
 public static partial class DB {
     public static async Task MigrateFields() {
         var migrateCollection = Collection<DocumentMigration>();
-        var migrations = await migrateCollection.Find(e => !e.IsMigrated).SortByDescending(e => e.MigrationNumber).ToListAsync();
+        var migrations = await migrateCollection.Find(e => !e.IsMigrated)
+                                                .SortByDescending(e => e.MigrationNumber)
+                                                .ToListAsync();
         foreach (var migration in migrations) {
             if (migration.TypeConfiguration == null) {
-                //CreateLogger.LogError("TypeConfiguration is null");
+                //TODO: Add logger
                 Console.WriteLine("TypeConfiguration is null");
                 return;
             }
@@ -55,7 +57,8 @@ public static partial class DB {
                     }
                     //Add update to queue
                     var filter=Builders<BsonDocument>.Filter.Eq("_id",entity["_id"]);
-                    var update=Builders<BsonDocument>.Update.Set("AdditionalData",doc);
+                    var update=Builders<BsonDocument>.Update.Set("AdditionalData",doc)
+                                                     .Set("DocumentVersion",migration.Version);
                     updates.Add(new(filter,update));
                 }
                 
@@ -76,6 +79,7 @@ public static partial class DB {
                     }
                 }
             }
+            typeConfig.DocumentVersion = migration.Version;
             await typeConfig.SaveAsync();
             migration.IsMigrated = true;
             await migration.SaveAsync();
@@ -154,55 +158,41 @@ public static partial class DB {
         await collection.BulkWriteAsync(updates);
         await migration.DeleteAsync();
     }
-    public static async Task<TEntity> MigrateEntity<TEntity>(TEntity entity,CancellationToken cancellation = default) where TEntity : Entity {
-        var typeConfig=await Find<TypeConfiguration>().Match(e => e.CollectionName == CollectionName<TEntity>())
-                                                      .ExecuteFirstAsync(cancellation);
+    public static async Task MigrateEntity<TEntity>(TEntity entity,CancellationToken cancellation = default) where TEntity : DocumentEntity {
+        var typeConfig = DB.TypeConfiguration<TEntity>() ?? await Find<TypeConfiguration>()
+                                                                  .Match(e => e.CollectionName == CollectionName<TEntity>())
+                                                                  .ExecuteFirstAsync(cancellation);
         if (typeConfig == null) {
-            return entity;
+            return;
         }
         
-        if (!typeConfig.Migrations.Any()) { 
-            return entity;
+        if (!typeConfig.Migrations.Any()) {
+            return;
         }
         var migrations=await typeConfig.Migrations.ChildrenQueryable().ToListAsync(cancellationToken: cancellation);
 
         if (migrations.Count <= 0) {
-            return entity;
+            return;
         }
         
+        if (entity.AdditionalData == null) {
+            entity.AdditionalData= [];
+        }
+        var doc = entity.AdditionalData;
         var entityDoc=entity.ToBsonDocument();
-            //Check if AdditionalData is null, create new if null
-            var doc=entityDoc.GetElement("AdditionalData").Value.ToBsonDocument();
-            if (doc.Contains("_csharpnull")) {
-                doc = new BsonDocument();
-            }
-            foreach (var migration in migrations) {
-                foreach (var op in migration.UpOperations) {
-                    if (op is AddFieldOperation addField) {
-                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == addField.Field.FieldName) == null) {
-                            await AddField(typeConfig,addField.Field,doc,entityDoc);
-                        }
-                    }else if (op is DropFieldOperation dropField) {
-                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == dropField.Field.FieldName) != null) {
-                            doc.Remove(dropField.Field.FieldName);
-                        }
-                    }else if (op is AlterFieldOperation alterField) {
-                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == alterField.OldField.FieldName) != null) {
-                            doc.Remove(alterField.OldField.FieldName);
-                            await AddField(typeConfig,alterField.Field,doc,entityDoc);
-                        } else {
-                            await AddField(typeConfig,alterField.Field,doc,entityDoc);
-                        }
-                    }
+        
+        foreach (var migration in migrations) {
+            foreach (var op in migration.UpOperations) {
+                if (op is AddFieldOperation addField) {
+                    await AddField(typeConfig,addField.Field,doc,entityDoc);
+                }else if (op is DropFieldOperation dropField) {
+                    doc.Remove(dropField.Field.FieldName);
+                }else if (op is AlterFieldOperation alterField) {
+                    doc.Remove(alterField.OldField.FieldName);
+                    await AddField(typeConfig,alterField.Field,doc,entityDoc);
                 }
             }
-            entityDoc["AdditionalData"] = doc;
-            entity= BsonSerializer.Deserialize<TEntity>(entityDoc);
-            return entity;
-    }
-    
-    public static async Task TestToBson<TEntity>(TEntity entity,CancellationToken cancellation = default) where TEntity : Entity {
-        Console.WriteLine(entity.ToBsonDocument());
+        }
     }
     public static async Task AddField(TypeConfiguration typeConfig, Field field, BsonDocument doc,BsonDocument entity) {
         if (field is ObjectField oField) {
@@ -216,15 +206,15 @@ public static partial class DB {
                 var expression=await ProcessCalculationField(calcField,doc,entity);
                 if (calcField.IsBooleanExpression) {
                     object result=((bool)expression.Evaluate()) ? calcField.TrueValue : calcField.FalseValue;
-                    doc.Add(calcField.FieldName,BsonValue.Create(result));
+                    doc[calcField.FieldName] = BsonValue.Create(result);
                 } else {
-                    doc.Add(calcField.FieldName,BsonValue.Create(expression.Evaluate()));
+                    doc[calcField.FieldName] = BsonValue.Create(expression.Evaluate());
                 }
             }else {
-                doc.Add(vField.FieldName,BsonValue.Create(vField.DefaultValue));
+                doc[vField.FieldName] = BsonValue.Create(vField.DefaultValue);
             }
         }else if (field is SelectionField sField) {
-            doc.Add(sField.FieldName,BsonValue.Create(sField.DefaultValue));
+            doc[sField.FieldName] = BsonValue.Create(sField.DefaultValue);
         }
     }
     public static async Task UpdateField(TypeConfiguration typeConfig, Field field,Field oldField, BsonDocument doc,BsonDocument entity) {

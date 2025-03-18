@@ -19,13 +19,13 @@ public static partial class DB
     /// Saves a complete entity and migrates  the custom fields, replacing an existing entity or creating a new one if it does not exist.
     /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
     /// </summary>
-    /// <typeparam name="T">Any class that implements IEntity</typeparam>
+    /// <typeparam name="T">Any class that implements DocumentEntity</typeparam>
     /// <param name="entity">The instance to persist</param>
     /// <param name="session">An optional session if using within a transaction</param>
     /// <param name="cancellation">And optional cancellation token</param>
-    public static async Task SaveMigrateAsync<T>(T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : Entity {
+    public static async Task SaveMigrateAsync<T>(T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : DocumentEntity {
         var filter = Builders<T>.Filter.Eq(Cache<T>.IdPropName, entity.GetId());
-        entity=await MigrateEntity(entity,cancellation:cancellation);
+        await MigrateEntity(entity,cancellation:cancellation);
         if (PrepAndCheckIfInsert(entity)) {
             if (session == null) {
                 await Collection<T>().InsertOneAsync(entity, null, cancellation);
@@ -40,6 +40,11 @@ public static partial class DB
             }
         }
     }
+
+    /*public static async Task CheckNeedsMigration<T>(T entity) where T : DocumentEntity {
+        var type = typeof(T);
+        var properties=type.GetProperties();
+    }*/
 
     /// <summary>
     /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
