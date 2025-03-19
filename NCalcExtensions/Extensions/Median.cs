@@ -36,10 +36,10 @@ internal static class Median
 			functionArgs.Result = originalList switch
 			{
 				null => null,
-				IEnumerable<byte> list => list.Median(e=>(int)e),
-				IEnumerable<byte?> list => list.DefaultIfEmpty(null).Median(e=>(int?)e),
-				IEnumerable<short> list => list.Median(e=>(int)e),
-				IEnumerable<short?> list => list.DefaultIfEmpty(null).Median(e=>(int?)e),
+				IEnumerable<byte> list => list.Median(e=>e),
+				IEnumerable<byte?> list => list.DefaultIfEmpty(null).Median(e=>e),
+				IEnumerable<short> list => list.Median(e=>e),
+				IEnumerable<short?> list => list.DefaultIfEmpty(null).Median(e=>e),
 				IEnumerable<int> list => list.Median(),
 				IEnumerable<int?> list => list.DefaultIfEmpty(null).Median(),
 				IEnumerable<long> list => list.Median(),

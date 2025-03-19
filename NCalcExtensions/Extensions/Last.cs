@@ -52,6 +52,6 @@ internal static class Last
 			}
 		}
 
-		throw new FormatException($"No matching element found.");
+		throw new FormatException("No matching element found.");
 	}
 }

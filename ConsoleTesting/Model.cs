@@ -18,7 +18,7 @@ public class EpiRun : DocumentEntity,ICreatedOn,IModifiedOn {
     public One<XrdData> XrdData { get; set; }
     
     public EpiRun() {
-        this.InitOneToMany(()=>this.EpiRunMonitoring);
+        this.InitOneToMany(()=>EpiRunMonitoring);
     }
 
     static EpiRun() {

@@ -1,9 +1,8 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using MongoDB.Driver.Linq;
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MongoDB.Entities.Tests;
 
@@ -100,7 +99,7 @@ public class UpdateObjectId
     [TestMethod]
     public async Task bulk_update_modifies_correct_documents()
     {
-        var title = "bumcd " + Guid.NewGuid().ToString();
+        var title = "bumcd " + Guid.NewGuid();
         var books = new Collection<BookObjectId>();
 
         for (var i = 1; i <= 5; i++)

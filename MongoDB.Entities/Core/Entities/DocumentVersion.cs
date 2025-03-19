@@ -18,9 +18,7 @@ public struct DocumentVersion : IComparable<DocumentVersion> {
     static DocumentVersion() {
         try {
             BsonSerializer.RegisterSerializer(typeof(DocumentVersion), new DocumentVersionSerializer());
-        } catch (Exception) {
-            
-        }
+        } catch (Exception) { }
     }
 
     public DocumentVersion(string version) {
@@ -30,17 +28,17 @@ public struct DocumentVersion : IComparable<DocumentVersion> {
             throw new VersionStringToLongException(version);
         }
 
-        this.Major = ParseVersionPart(versionParts[0]);
+        Major = ParseVersionPart(versionParts[0]);
 
-        this.Minor = ParseVersionPart(versionParts[1]);
+        Minor = ParseVersionPart(versionParts[1]);
 
-        this.Revision = ParseVersionPart(versionParts[2]);
+        Revision = ParseVersionPart(versionParts[2]);
     }
 
     public DocumentVersion(int major, int minor, int revision) {
-        this.Major = major;
-        this.Minor = minor;
-        this.Revision = revision;
+        Major = major;
+        Minor = minor;
+        Revision = revision;
     }
 
     public static DocumentVersion Default() {
@@ -52,19 +50,45 @@ public struct DocumentVersion : IComparable<DocumentVersion> {
     }
 
     public DocumentVersion IncrementMajor() {
-        this.Major=this.Major<0 ? 0:this.Major;
-        this.Major++;
+        Major=Major<0 ? 0:Major;
+        Major+=1;
+        Minor = 0;
+        Revision = 0;
+        return this;
+    }
+    public DocumentVersion Increment() {
+        if (Major < 0) {
+            return this.IncrementMajor();
+        }
+        if (Revision < 9) {
+            Revision++;
+            return this;
+        }
+
+        if (Minor < 9) {
+            Minor++;
+            Revision = 0;
+            return this;
+        }
+        return this.IncrementMajor();
+    }
+    
+    public DocumentVersion DecrementMajor() {
+        Major=Major is > 0 and 1 ? 0:--Major;
         return this;
     }
 
-    public DocumentVersion IncrementMinor() {
-        this.Minor++;
-        return this;
-    }
-
-    public DocumentVersion IncrementRevision() {
-        this.Revision++;
-        return this;
+    public DocumentVersion Decrement() {
+        if (Revision >= 1) {
+            Revision--;
+            return this;
+        }
+        if (Minor >= 1) {
+            Minor--;
+            Revision = 9;
+            return this;
+        }
+        return this.DecrementMajor();
     }
 
     public static implicit operator DocumentVersion(string version) {
@@ -76,11 +100,11 @@ public struct DocumentVersion : IComparable<DocumentVersion> {
     }
 
     public override string ToString() {
-        return $"{this.Major}.{this.Minor}.{this.Revision}";
+        return $"{Major}.{Minor}.{Revision}";
     }
 
     public int CompareTo(DocumentVersion other) {
-        if (this.Equals(other)) {
+        if (Equals(other)) {
             return 0;
         }
 
@@ -114,7 +138,7 @@ public struct DocumentVersion : IComparable<DocumentVersion> {
     }
 
     public bool Equals(DocumentVersion other) {
-        return other.Major == this.Major && other.Minor == this.Minor && other.Revision == this.Revision;
+        return other.Major == Major && other.Minor == Minor && other.Revision == Revision;
     }
 
     public override bool Equals(object? obj) {
@@ -126,14 +150,14 @@ public struct DocumentVersion : IComparable<DocumentVersion> {
             return false;
         }
 
-        return this.Equals((DocumentVersion)obj);
+        return Equals((DocumentVersion)obj);
     }
 
     public override int GetHashCode() {
         unchecked {
-            int result = this.Major;
-            result = (result * 397) ^ this.Minor;
-            result = (result * 397) ^ this.Revision;
+            int result = Major;
+            result = (result * 397) ^ Minor;
+            result = (result * 397) ^ Revision;
             return result;
         }
     }

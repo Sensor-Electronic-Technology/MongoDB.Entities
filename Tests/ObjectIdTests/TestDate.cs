@@ -1,8 +1,8 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using MongoDB.Driver.Linq;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MongoDB.Driver.Linq;
 
 namespace MongoDB.Entities.Tests;
 
@@ -116,7 +116,7 @@ public class DatesObjectId
     {
         var now = DateTime.UtcNow;
 
-        var date = new Date() { Ticks = now.Ticks };
+        var date = new Date { Ticks = now.Ticks };
 
         Assert.AreEqual(now, date.DateTime);
     }

@@ -34,8 +34,7 @@ internal static class IsNaN
 				int or long or short or byte or sbyte or uint or ulong or ushort or decimal => false,
 				_ => true
 			};
-			return;
-		}
+        }
 		catch (Exception e) when (e is not NCalcExtensionsException or FormatException)
 		{
 			throw new FormatException(e.Message);

@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 
 namespace MongoDB.Entities;
 
@@ -25,7 +24,7 @@ public static partial class DB
     /// <param name="cancellation">And optional cancellation token</param>
     public static async Task SaveMigrateAsync<T>(T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : DocumentEntity {
         var filter = Builders<T>.Filter.Eq(Cache<T>.IdPropName, entity.GetId());
-        await MigrateEntity(entity,cancellation:cancellation);
+        await ApplyMigrations(entity,cancellation:cancellation);
         if (PrepAndCheckIfInsert(entity)) {
             if (session == null) {
                 await Collection<T>().InsertOneAsync(entity, null, cancellation);

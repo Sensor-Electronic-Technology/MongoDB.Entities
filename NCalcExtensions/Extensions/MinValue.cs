@@ -42,7 +42,5 @@ internal static class MinValue
 			"decimal" => decimal.MinValue,
 			_ => throw new FormatException(ErrorMessage)
 		};
-
-		return;
-	}
+    }
 }

@@ -8,6 +8,27 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace MongoDB.Entities;
 
 
+/// <summary>
+/// For the AvailableProperties property in <see cref="TypeConfiguration"/>
+/// Useful for the UI layer when displaying custom fields in a table
+/// </summary>
+[BsonDiscriminator(RootClass = true), 
+ BsonKnownTypes(typeof(ObjectFieldInfo))]
+public class FieldInfo {
+    public TypeCode TypeCode { get; set; }
+}
+
+public class ObjectFieldInfo : FieldInfo {
+    public Dictionary<string,FieldInfo> Fields { get; set; } = [];
+}
+
+/// <summary>
+/// Defines a custom field.
+/// ObjectField: Field that holds other fields, aka a entity
+/// ValueField: Field that only holds a value
+/// CalculatedField: Field that is calculated
+/// SelectionField: Field that can only be from a given set of value, aka enum, drop down list, etc
+/// </summary>
 [BsonDiscriminator(RootClass = true),
  BsonKnownTypes(typeof(ObjectField), 
      typeof(ValueField), 
@@ -17,6 +38,10 @@ public class Field:IEquatable<Field> {
     public string FieldName { get; set; } = string.Empty;
     public BsonType BsonType { get; set; }
     public TypeCode TypeCode { get; set; }
+
+    public virtual KeyValuePair<string,FieldInfo> ToFieldInfo() {
+        return new KeyValuePair<string, FieldInfo>(FieldName, new() { TypeCode = TypeCode });
+    }
 
     public bool Equals(Field? other) {
         if (other is null)
@@ -37,6 +62,22 @@ public class Field:IEquatable<Field> {
 
 public class ObjectField : Field {
    public List<Field> Fields { get; set; } = [];
+
+   public override KeyValuePair<string, FieldInfo> ToFieldInfo() {
+       return ProcessField();
+   }
+
+   private KeyValuePair<string, FieldInfo> ProcessField() {
+       ObjectFieldInfo objInfo = new ObjectFieldInfo {
+           TypeCode = TypeCode,
+           Fields = []
+       };
+       foreach (var subField in Fields) {
+           var pair=subField.ToFieldInfo();
+           objInfo.Fields.Add(pair.Key, pair.Value);
+       }
+       return new(FieldName, objInfo);
+   }
 }
 
 public class ValueField : Field {
@@ -64,13 +105,13 @@ public partial class CalculatedField:ValueField  {
 
     public bool IsValid() {
          var regex = MyRegex();
-         var matches=regex.Matches(this.Expression);
+         var matches=regex.Matches(Expression);
 
-         if (matches.Count!=this.Variables.Count) {
+         if (matches.Count!=Variables.Count) {
              return false;
          }
          bool isValid=true;
-         var variables = this.Variables.Select(e => e.VariableName).ToArray();
+         var variables = Variables.Select(e => e.VariableName).ToArray();
          
          foreach (Match match in matches) {
              if (!variables.Contains(match.Groups[1].Value)) {

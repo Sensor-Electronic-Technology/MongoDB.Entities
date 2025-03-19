@@ -1,12 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MongoDB.Entities.Tests.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MongoDB.Entities.Tests;
 
@@ -411,7 +411,7 @@ public class SavingUuid
         var book = new BookUuid { Title = "Test" }; await book.SaveAsync();
         var author1 = new AuthorUuid { Name = "ewtrcd1" }; await author1.SaveAsync();
         var author2 = new AuthorUuid { Name = "ewtrcd2" }; await author2.SaveAsync();
-        var list = new List<AuthorUuid>() { author1, author2 };
+        var list = new List<AuthorUuid> { author1, author2 };
         book.OtherAuthors = list.ToDocuments().ToArray();
         await book.SaveAsync();
         var authors = book.Queryable()

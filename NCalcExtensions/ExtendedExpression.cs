@@ -1,4 +1,5 @@
 ﻿using NCalcExtensions.Extensions;
+using TimeSpan = NCalcExtensions.Extensions.TimeSpan;
 
 namespace NCalcExtensions;
 
@@ -308,7 +309,7 @@ public class ExtendedExpression : Expression
 				throw Throw.Evaluate(functionArgs);
 			case ExtensionFunction.TimeSpan:
 			case ExtensionFunction.TimeSpanCamel:
-				Extensions.TimeSpan.Evaluate(functionArgs, _cultureInfo);
+				TimeSpan.Evaluate(functionArgs, _cultureInfo);
 				return;
 			case ExtensionFunction.ToDateTime:
 				ToDateTime.Evaluate(functionArgs, _cultureInfo);

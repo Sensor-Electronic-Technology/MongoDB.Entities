@@ -1,6 +1,6 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using System;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Entities.Tests.Models;
-using System;
 
 namespace MongoDB.Entities.Tests;
 

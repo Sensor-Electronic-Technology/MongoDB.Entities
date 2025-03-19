@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Linq.Dynamic.Core;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using System.Linq.Dynamic.Core;
-using System.Linq.Expressions;
-using System.Threading;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using NCalcExtensions;
@@ -15,27 +14,34 @@ using NCalcExtensions;
 namespace MongoDB.Entities;
 
 public static partial class DB {
-    public static async Task MigrateFields() {
+    /// <summary>
+    /// Migrate all migrations that haven't been migrated yet.
+    /// Designed to be run by a external service or at startup
+    /// </summary>
+    public static async Task ApplyMigrations() {
         var migrateCollection = Collection<DocumentMigration>();
         var migrations = await migrateCollection.Find(e => !e.IsMigrated)
                                                 .SortByDescending(e => e.MigrationNumber)
                                                 .ToListAsync();
+        Log(LogLevel.Information, "Applying migrations, Count: {Count}", migrations.Count);
         foreach (var migration in migrations) {
             if (migration.TypeConfiguration == null) {
-                //TODO: Add logger
-                Console.WriteLine("TypeConfiguration is null");
+                Log(LogLevel.Warning,"TypeConfiguration is for migration {Migration} is null",migration.ID);
                 return;
             }
             var typeConfig = await migration.TypeConfiguration.ToEntityAsync();
-            var collection = DB.Collection(typeConfig.DatabaseName,typeConfig.CollectionName);
-            var cursor = await collection.FindAsync(new BsonDocument(), new FindOptions<BsonDocument>(){BatchSize = 100});
+            Log(LogLevel.Information, "Applying migration: ID: {MigrationId} Type:{Type} Number:{Number}", migration.ID,
+                typeConfig.TypeName,
+                migration.MigrationNumber);
+            var collection = Collection(typeConfig.DatabaseName,typeConfig.CollectionName);
+            var cursor = await collection.FindAsync(new BsonDocument(), new FindOptions<BsonDocument> {BatchSize = 100});
             List<UpdateManyModel<BsonDocument>> updates = [];
             while (await cursor.MoveNextAsync()) {
                 foreach (var entity in cursor.Current) {
                     //Check if AdditionalData is null, create new if null
                     var doc=entity.GetElement("AdditionalData").Value.ToBsonDocument();
                     if (doc.Contains("_csharpnull")) {
-                        doc = new BsonDocument();
+                        doc = [];
                     }
                     foreach (var op in migration.UpOperations) {
                         if (op is AddFieldOperation addField) {
@@ -55,13 +61,11 @@ public static partial class DB {
                             }
                         }
                     }
-                    //Add update to queue
                     var filter=Builders<BsonDocument>.Filter.Eq("_id",entity["_id"]);
                     var update=Builders<BsonDocument>.Update.Set("AdditionalData",doc)
                                                      .Set("DocumentVersion",migration.Version);
                     updates.Add(new(filter,update));
                 }
-                
             }
             foreach (var op in migration.UpOperations) {
                 if (op is AddFieldOperation addField) {
@@ -80,23 +84,38 @@ public static partial class DB {
                 }
             }
             typeConfig.DocumentVersion = migration.Version;
+            typeConfig.UpdateAvailableProperties();
             await typeConfig.SaveAsync();
             migration.IsMigrated = true;
             await migration.SaveAsync();
             await collection.BulkWriteAsync(updates);
+            Log(LogLevel.Information,"Migration completed");
         }
     }
-    public static async Task UndoMigration(DocumentMigration migration) {
-        //var logger = CreateLogger;
+    /// <summary>
+    /// Reverts a migration
+    /// </summary>
+    /// <param name="migration">Migration to revert</param>
+    public static async Task RevertMigration(DocumentMigration migration) {
         if (migration.TypeConfiguration == null) {
-            //logger.LogError("Failed to undo migration {MigrationId}. TypeConfiguration is null",migration.ID);
-            Console.WriteLine($"Failed to undo migration {migration.ID}, TypeConfiguration is null");
+            Log(LogLevel.Warning,"TypeConfiguration is for migration {Migration} is null",migration.ID);
             return;
         }
+        //TODO: Should you only allow the last migration to be reverted??
+        /*var migrationNumber = await DB.Collection<DocumentMigration>()
+                                      .Find(_ => true)
+                                      .SortByDescending(e => e.MigrationNumber)
+                                      .Project(e=>e.MigrationNumber)
+                                      .FirstOrDefaultAsync();
+
+        if (migration.MigrationNumber!=migrationNumber) {
+            return;
+        }*/
         var typeConfig = await migration.TypeConfiguration.ToEntityAsync();
-        var collection = DB.Collection(typeConfig.DatabaseName, typeConfig.CollectionName);
-        var cursor=await collection.FindAsync(new BsonDocument(),new FindOptions<BsonDocument>(){BatchSize=100});
+        var collection = Collection(typeConfig.DatabaseName, typeConfig.CollectionName);
+        var cursor=await collection.FindAsync(new BsonDocument(),new FindOptions<BsonDocument> {BatchSize=100});
         List<UpdateManyModel<BsonDocument>> updates = new();
+        var version=migration.IsMajorVersion ? typeConfig.DocumentVersion.DecrementMajor():typeConfig.DocumentVersion.Decrement();
         while (await cursor.MoveNextAsync()) {
             foreach (var entity in cursor.Current) {
                 var doc=entity.GetElement("AdditionalData").Value.ToBsonDocument();
@@ -106,9 +125,6 @@ public static partial class DB {
                 foreach (var op in migration.DownOperations) {
                     if (op is AddFieldOperation addField) {
                         if(typeConfig.Fields.FirstOrDefault(e=>e.FieldName==addField.Field.FieldName)!=null){
-                            /*logger.LogError("Failed to undo migration {MigrationId} operation. " +
-                                            "Field {FieldName} already exists",
-                                migration.ID,addField.Field.FieldName);*/
                             Console.WriteLine($"Failed to undo migration {migration.ID}. Field {addField.Field.FieldName} already exists");
                             continue;
                         }
@@ -131,7 +147,8 @@ public static partial class DB {
                     }
                     //Add update to queue
                     var filter=Builders<BsonDocument>.Filter.Eq("_id",entity["_id"]);
-                    var update=Builders<BsonDocument>.Update.Set("AdditionalData",doc);
+                    var update=Builders<BsonDocument>.Update.Set("AdditionalData",doc)
+                                                     .Set("DocumentVersion",version);
                     updates.Add(new(filter,update));
                 }
             }
@@ -154,12 +171,19 @@ public static partial class DB {
         }//End TypeConfiguration Update
         
         //Update documents,Update TypeConfiguration, Delete migration
+        typeConfig.DocumentVersion = version;
         await typeConfig.SaveAsync();
         await collection.BulkWriteAsync(updates);
         await migration.DeleteAsync();
     }
-    public static async Task MigrateEntity<TEntity>(TEntity entity,CancellationToken cancellation = default) where TEntity : DocumentEntity {
-        var typeConfig = DB.TypeConfiguration<TEntity>() ?? await Find<TypeConfiguration>()
+    /// <summary>
+    /// Migrates a single entity of type DocumentEntity
+    /// </summary>
+    /// <param name="entity">Entity to apply migration to</param>
+    /// <param name="cancellation">Optional Cancellation Token</param>
+    /// <typeparam name="TEntity">Restricted to type DocumentMigration</typeparam>
+    public static async Task ApplyMigrations<TEntity>(TEntity entity,CancellationToken cancellation = default) where TEntity : DocumentEntity {
+        var typeConfig = TypeConfiguration<TEntity>() ?? await Find<TypeConfiguration>()
                                                                   .Match(e => e.CollectionName == CollectionName<TEntity>())
                                                                   .ExecuteFirstAsync(cancellation);
         if (typeConfig == null) {
@@ -194,7 +218,7 @@ public static partial class DB {
             }
         }
     }
-    public static async Task AddField(TypeConfiguration typeConfig, Field field, BsonDocument doc,BsonDocument entity) {
+    internal static async Task AddField(TypeConfiguration typeConfig, Field field, BsonDocument doc,BsonDocument entity) {
         if (field is ObjectField oField) {
             var objDoc=new BsonDocument();
             foreach(var f in oField.Fields) { 
@@ -217,7 +241,7 @@ public static partial class DB {
             doc[sField.FieldName] = BsonValue.Create(sField.DefaultValue);
         }
     }
-    public static async Task UpdateField(TypeConfiguration typeConfig, Field field,Field oldField, BsonDocument doc,BsonDocument entity) {
+    internal static async Task UpdateField(TypeConfiguration typeConfig, Field field,Field oldField, BsonDocument doc,BsonDocument entity) {
         if (field is ObjectField oField) {
             var objDoc=new BsonDocument();
             foreach(var f in oField.Fields) { 
@@ -233,7 +257,7 @@ public static partial class DB {
             doc.Add(cField.FieldName,BsonValue.Create(expression.Evaluate()));
         }
     }
-    public static async Task<ExtendedExpression> ProcessCalculationField(CalculatedField cField, BsonDocument doc, BsonDocument entity) {
+    internal static async Task<ExtendedExpression> ProcessCalculationField(CalculatedField cField, BsonDocument doc, BsonDocument entity) {
         var expression = new ExtendedExpression(cField.Expression);
         foreach (var variable in cField.Variables) {
             if (variable is ValueVariable vVar) {
@@ -282,16 +306,16 @@ public static partial class DB {
                                 VariableType.STRING => "",
                                 VariableType.BOOLEAN => false,
                                 VariableType.DATE => DateTime.MinValue,
-                                VariableType.LIST_NUMBER => new List<double>(){0,0,0},
-                                VariableType.LIST_STRING => new List<string>(){"","",""},
-                                VariableType.LIST_BOOLEAN => new List<bool>(){false,false,false},
-                                VariableType.LIST_DATE => new List<DateTime>(){DateTime.MinValue,DateTime.MinValue,DateTime.MinValue},
+                                VariableType.LIST_NUMBER => new List<double> {0,0,0},
+                                VariableType.LIST_STRING => new List<string> {"","",""},
+                                VariableType.LIST_BOOLEAN => new List<bool> {false,false,false},
+                                VariableType.LIST_DATE => new List<DateTime> {DateTime.MinValue,DateTime.MinValue,DateTime.MinValue},
                                 _ => throw new ArgumentException("Empty Value type not supported")
                             };
                         }
                     }
                 }else if (pVar is RefPropertyVariable rVar) { 
-                    var collection = DB.Collection(rVar.DatabaseName,rVar.CollectionName).AsQueryable();
+                    var collection = Collection(rVar.DatabaseName,rVar.CollectionName).AsQueryable();
                     if (rVar.Filter != null) {
                         collection.Where(rVar.Filter.ToString());
                     }
@@ -321,7 +345,7 @@ public static partial class DB {
                         };
                     }
                 }else if (pVar is RefCollectionPropertyVariable rcVar) {
-                    var collection = DB.Collection(rcVar.DatabaseName, rcVar.CollectionName);
+                    var collection = Collection(rcVar.DatabaseName, rcVar.CollectionName);
                     List<BsonDocument> list = [];
                     if (rcVar.Filter != null) {
                         list=await collection.AsQueryable().Where(rcVar.Filter.ToString()).ToListAsync();
@@ -367,5 +391,10 @@ public static partial class DB {
         }
         return expression;
     }
+    /*internal static bool CanRevert(DocumentMigration migration) {
+        //false if 
+        //deletes a field 
+        return true;
+    }*/
 }
 

@@ -42,7 +42,5 @@ internal static class MaxValue
 			"decimal" => decimal.MaxValue,
 			_ => throw new FormatException(ErrorMessage)
 		};
-
-		return;
-	}
+    }
 }

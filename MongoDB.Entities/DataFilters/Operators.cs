@@ -19,7 +19,7 @@ public class ComparisonOperator : SmartEnum<ComparisonOperator, string> {
     public string ODataOperator { get; }
 
     public ComparisonOperator(string name, string value, string oDataOp) : base(name, value) {
-        this.ODataOperator=oDataOp;
+        ODataOperator=oDataOp;
     }
 }
 
@@ -29,6 +29,6 @@ public class LogicalOperator : SmartEnum<LogicalOperator, string> {
     public string ODataOperator { get; }
 
     public LogicalOperator(string name, string value, string oDataOp) : base(name, value) {
-        this.ODataOperator=oDataOp;
+        ODataOperator=oDataOp;
     }
 }

@@ -1,5 +1,5 @@
-﻿using MongoDB.Entities;
-using System;
+﻿using System;
+using MongoDB.Entities;
 
 namespace Benchmark;
 

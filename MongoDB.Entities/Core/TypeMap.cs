@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using MongoDB.Driver;
 
 namespace MongoDB.Entities;
@@ -39,6 +37,8 @@ static class TypeMap
 
     internal static void AddUpdateTypeConfiguration(Type entityType, TypeConfiguration? typeConfiguration) =>
         _typeToCollectionMap[entityType] = typeConfiguration;
+    
+    internal static void ClearTypeConfigurations()=>_typeToCollectionMap.Clear();
 
     internal static IMongoDatabase GetDatabase(Type entityType)
     {

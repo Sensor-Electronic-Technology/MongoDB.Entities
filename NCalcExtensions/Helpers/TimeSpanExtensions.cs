@@ -2,7 +2,7 @@
 
 internal static class TimeSpanExtensions
 {
-	internal static string Humanise(this System.TimeSpan t)
+	internal static string Humanise(this TimeSpan t)
 	{
 		// Humanize a TimeSpan into days, hours, minutes and seconds.
 		var durationString = t.Days >= 1 ? $"{t.Days} day{(t.Days > 1 ? "s" : "")}" : "";

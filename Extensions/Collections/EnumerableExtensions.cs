@@ -7,8 +7,6 @@ using Extensions.Gaurd;
 
 namespace EpiSystem.Extensions.Collection.Generic;
 
-using System.Linq;
-
 public static class EnumerableExtensions {
     public static double Median(this IEnumerable<int> source) {
         Guard.Against.Null(source, nameof(source));
@@ -18,10 +16,10 @@ public static class EnumerableExtensions {
         if (sortedArray.Length % 2 == 0) {
             //Even
             return (sortedArray[itemIndex] + sortedArray[itemIndex - 1]) / 2.0;
-        } else {
-            // Odd 
-            return sortedArray[itemIndex];
         }
+
+        // Odd 
+        return sortedArray[itemIndex];
     }
 
     public static double Median(this IEnumerable<long> source) => Median<long, long, double>(source);
@@ -44,10 +42,10 @@ public static class EnumerableExtensions {
             if (sortedList.Length % 2 == 0) {
                 //Even
                 return TResult.CreateChecked((TAccumulator.CreateChecked(sortedList[itemIndex]+sortedList[itemIndex-1])) / TAccumulator.CreateChecked(2));
-            } else {
-                // Odd 
-                return TResult.CreateChecked(sortedList[itemIndex]);
             }
+
+            // Odd 
+            return TResult.CreateChecked(sortedList[itemIndex]);
         } else {
             var sortedArray=source.OrderBy(number => number).ToArray();
             int itemIndex = sortedArray.Length / 2;
@@ -55,10 +53,10 @@ public static class EnumerableExtensions {
             if (sortedList.Length % 2 == 0) {
                 //Even
                 return TResult.CreateChecked((TAccumulator.CreateChecked(sortedArray[itemIndex]+sortedArray[itemIndex-1])) / TAccumulator.CreateChecked(2));
-            } else {
-                // Odd 
-                return TResult.CreateChecked(sortedArray[itemIndex]);
             }
+
+            // Odd 
+            return TResult.CreateChecked(sortedArray[itemIndex]);
         }
     }
 
@@ -89,14 +87,14 @@ public static class EnumerableExtensions {
                     return TResult.CreateChecked((TAccumulator.CreateChecked(in1)+TAccumulator.CreateChecked(in2)) / TAccumulator.CreateChecked(2));
                 }
                 return null;
-            } else {
-                // Odd 
-                if (sortedList[itemIndex].HasValue) {
-                    return TResult.CreateChecked(sortedList[itemIndex].GetValueOrDefault());
-                }
-
-                return null;
             }
+
+            // Odd 
+            if (sortedList[itemIndex].HasValue) {
+                return TResult.CreateChecked(sortedList[itemIndex].GetValueOrDefault());
+            }
+
+            return null;
         } else {
             var sortedArray=source.OrderBy(number => number).ToArray();
             int itemIndex = sortedArray.Length / 2;
@@ -108,10 +106,10 @@ public static class EnumerableExtensions {
                     return TResult.CreateChecked((TAccumulator.CreateChecked(in1)+TAccumulator.CreateChecked(in2)) / TAccumulator.CreateChecked(2));
                 }
                 return null;
-            } else {
-                // Odd 
-                return TResult.CreateChecked(sortedArray[itemIndex].GetValueOrDefault());
             }
+
+            // Odd 
+            return TResult.CreateChecked(sortedArray[itemIndex].GetValueOrDefault());
         }
     }
     
@@ -145,10 +143,10 @@ public static class EnumerableExtensions {
             if (sortedList.Length % 2 == 0) {
                 //Even
                 return TResult.CreateChecked((TAccumulator.CreateChecked(sortedList[itemIndex]+sortedList[itemIndex-1])) / TAccumulator.CreateChecked(2));
-            } else {
-                // Odd 
-                return TResult.CreateChecked(sortedList[itemIndex]);
             }
+
+            // Odd 
+            return TResult.CreateChecked(sortedList[itemIndex]);
         } else {
             var sortedArray=source.Select(selector).OrderBy(number => number).ToArray();
             int itemIndex = sortedArray.Length / 2;
@@ -156,10 +154,10 @@ public static class EnumerableExtensions {
             if (sortedArray.Length % 2 == 0) {
                 //Even
                 return TResult.CreateChecked((TAccumulator.CreateChecked(sortedArray[itemIndex]+sortedArray[itemIndex-1])) / TAccumulator.CreateChecked(2));
-            } else {
-                // Odd 
-                return TResult.CreateChecked(sortedArray[itemIndex]);
             }
+
+            // Odd 
+            return TResult.CreateChecked(sortedArray[itemIndex]);
         }
     }
 
@@ -198,14 +196,14 @@ public static class EnumerableExtensions {
                     return TResult.CreateChecked((TAccumulator.CreateChecked(in1)+TAccumulator.CreateChecked(in2)) / TAccumulator.CreateChecked(2));
                 }
                 return null;
-            } else {
-                // Odd 
-                if (sortedList[itemIndex].HasValue) {
-                    return TResult.CreateChecked(sortedList[itemIndex].GetValueOrDefault());
-                }
-
-                return null;
             }
+
+            // Odd 
+            if (sortedList[itemIndex].HasValue) {
+                return TResult.CreateChecked(sortedList[itemIndex].GetValueOrDefault());
+            }
+
+            return null;
         } else {
             var sortedArray=source.Select(selector).OrderBy(number => number).ToArray();
             int itemIndex = sortedArray.Length / 2;
@@ -217,10 +215,10 @@ public static class EnumerableExtensions {
                     return TResult.CreateChecked((TAccumulator.CreateChecked(in1)+TAccumulator.CreateChecked(in2)) / TAccumulator.CreateChecked(2));
                 }
                 return null;
-            } else {
-                // Odd 
-                return TResult.CreateChecked(sortedArray[itemIndex].GetValueOrDefault());
             }
+
+            // Odd 
+            return TResult.CreateChecked(sortedArray[itemIndex].GetValueOrDefault());
         }
 
         return null;

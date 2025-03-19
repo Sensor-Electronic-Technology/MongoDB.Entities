@@ -11,6 +11,10 @@ public interface IMigration
     Task UpgradeAsync();
 }
 
+/// <summary>
+/// The contract for user runtime field migrations
+/// </summary>
+
 public interface IDocumentMigration {
     public DocumentVersion Version { get; set; }
     public List<FieldOperation> UpOperations { get; set; }

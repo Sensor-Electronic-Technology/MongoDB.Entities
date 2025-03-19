@@ -3,9 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -41,6 +41,8 @@ public static partial class DB {
     internal static event Action? DefaultDbChanged;
     static readonly ConcurrentDictionary<string, IMongoDatabase> _dbs = new();
     static IMongoDatabase? _defaultDb;
+    private static readonly ILogger _logger = AppLogger.CreateLogger("DB");
+    public static bool LoggingEnabled { get; set; }
 
     /// <summary>
     /// Initializes a MongoDB connection with the given connection parameters.
@@ -51,9 +53,14 @@ public static partial class DB {
     /// <param name="database">Name of the database</param>
     /// <param name="host">Address of the MongoDB server</param>
     /// <param name="port">Port number of the server</param>
+    /// <param name="enableLogging">Enable internal logging</param>
     /// <param name="assemblies">assemblies to scan for types of DocumentEntity</param>
-    public static Task InitAsync(string database, string host = "127.0.0.1", int port = 27017,params Assembly[] assemblies)
-        => InitializeWithTypeConfig(new() { Server = new(host, port) }, database,assemblies:assemblies);
+    public static Task InitAsync(string database, string host = "127.0.0.1", int port = 27017, 
+                                 bool enableLogging = false,
+                                 params Assembly[] assemblies) { 
+        LoggingEnabled = enableLogging;
+        return InitializeWithTypeConfig(new() { Server = new(host, port) }, database,assemblies:assemblies);   
+    }
 
     /// <summary>
     /// Initializes a MongoDB connection with the given connection parameters.
@@ -78,24 +85,18 @@ public static partial class DB {
     /// <param name="port">Port number of the server</param>
     public static Task InitAsync(string database, string host = "127.0.0.1", int port = 27017)
         => Initialize(new() { Server = new(host, port) }, database);
-
-    /// <summary>
-    /// Creates watchers for internal usage. Internal watchers are created at startup but if
-    /// DropCollection is called for TypeConfig or DocumentMigration, the connection with be broken
-    /// </summary>
-    public static void CreateInternalWatchers() {
-        try {
-            InitTypeConfigWatcher();
-        }catch(Exception e){}
-    }
     
     internal static async Task InitializeWithTypeConfig(MongoClientSettings settings, string dbName, bool skipNetworkPing = false,params Assembly[] assemblies) {
-        if (string.IsNullOrEmpty(dbName))
-            throw new ArgumentNullException(nameof(dbName), "Database name cannot be empty!");
+        Log(LogLevel.Information,"Initializing database...");
+
+        if (string.IsNullOrEmpty(dbName)) {
+            var exception = new ArgumentNullException(nameof(dbName),"Database name cannot be empty!");
+            Log(logLevel:LogLevel.Critical,"Database name empty", exception);
+            throw exception;
+        }
+            
 
         if (_dbs.ContainsKey(dbName)) {
-            await ScanAssemblies();
-            InitTypeConfigWatcher();
             return;
         }
 
@@ -109,15 +110,17 @@ public static partial class DB {
             if (_dbs.TryAdd(dbName, db) && !skipNetworkPing) {
                 await db.RunCommandAsync((Command<BsonDocument>)"{ping:1}").ConfigureAwait(false);
             }
-            await ScanAssemblies(assemblies);
+            await ScanAssemblies();
             InitTypeConfigWatcher();
-        } catch (Exception) {
+        } catch (Exception e) {
+            Log(LogLevel.Critical,"Failed to initialize database", e);
             _dbs.TryRemove(dbName, out _);
             throw;
         }
     }
 
     internal static async Task ScanAssemblies(params Assembly[] assemblies) {
+        Log(LogLevel.Information,"Scanning assemblies for DocumentEntities");
         var typeConfigCollection = Cache<TypeConfiguration>.Collection;
         foreach (var assembly in assemblies) {
             var types=assembly.DefinedTypes.Where(e => e.BaseType == typeof(DocumentEntity)).ToList();
@@ -139,19 +142,21 @@ public static partial class DB {
             return;
         try {
             var db = new MongoClient(settings).GetDatabase(dbName);
-            if (_dbs.Count == 0)
+            if (_dbs.IsEmpty)
                 _defaultDb = db;
 
             if (_dbs.TryAdd(dbName, db) && !skipNetworkPing)
                 await db.RunCommandAsync((Command<BsonDocument>)"{ping:1}").ConfigureAwait(false);
-        } catch (Exception) {
+        } catch (Exception e) {
             _dbs.TryRemove(dbName, out _);
+            Log(LogLevel.Critical,"Failed to initialize database {Database}", e,dbName);
             throw;
         }
     }
     
 
     internal static void InitTypeConfigWatcher() {
+        Log(LogLevel.Information,"Creating watcher for TypConfigurations");
         var watcher = Watcher<TypeConfiguration>("type_config_internal_watcher");
         watcher.Start(eventTypes: EventType.Created | EventType.Updated | EventType.Deleted,
             batchSize: 5,
@@ -160,12 +165,12 @@ public static partial class DB {
             cancellation: CancellationToken.None);
         watcher.OnChangesCSD += HandleTypeConfigChanges;
         watcher.OnStop += () => {
-            Console.WriteLine("Watching stopped!");
+            Log(LogLevel.Warning, "Stopping watcher for TypConfigurations");
             if (watcher.CanRestart) {
                 watcher.ReStart();
-                Console.WriteLine("Watching restarted!");
+                Log(LogLevel.Information, "TypeConfigurations watcher restarted");
             } else {
-                Console.WriteLine("This watcher is dead!");
+                Log(LogLevel.Warning, "TypeConfigurations watcher failed to restart");
             }
         };
     }
@@ -177,14 +182,14 @@ public static partial class DB {
             if (type != null) {
                 switch (change.OperationType) {
                     case ChangeStreamOperationType.Delete:
-                        DB.AddUpdateTypeConfiguration(type,null);
-                        //Console.WriteLine($"Type {type.Name} has been deleted");
+                        AddUpdateTypeConfiguration(type,null);
+                        Log(LogLevel.Information,"Type {TypeName} is deleted from TypeConfigurationMap",args:type);
                         break;
                     case ChangeStreamOperationType.Insert:
                     case ChangeStreamOperationType.Update:
                     case ChangeStreamOperationType.Replace:
-                        DB.AddUpdateTypeConfiguration(type,typeConfig);
-                        //Console.WriteLine($"Type {type.Name} has been update with new TypeConfiguration");
+                        AddUpdateTypeConfiguration(type,typeConfig);
+                        Log(LogLevel.Information,"Type {TypeName} Operation {Operation} completed",type,change.OperationType);
                         break;
                 }
             }
@@ -327,5 +332,23 @@ public static partial class DB {
         newT.SetId(ID);
 
         return newT;
+    }
+    /// <summary>
+    /// Internal logger for DB
+    /// </summary>
+    /// <param name="logLevel"></param>
+    /// <param name="message"></param>
+    /// <param name="exception"></param>
+    /// <param name="args"></param>
+    private static void Log(LogLevel logLevel,[StructuredMessageTemplate]string message, Exception exception,params object[] args) {
+        if (LoggingEnabled) {
+            _logger.Log(logLevel:logLevel,message:message,exception:exception,args:args);
+        }
+    }
+    
+    private static void Log(LogLevel logLevel,[StructuredMessageTemplate]string message,params object[] args) {
+        if (LoggingEnabled) {
+            _logger.Log(logLevel:logLevel,message:message,args:args);
+        }
     }
 }

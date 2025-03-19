@@ -37,10 +37,10 @@ internal static class Avg
 		{
 			functionArgs.Result = originalList switch {
 				null => null,
-				IEnumerable<byte> list => list.Average(e=>(int)e),
-				IEnumerable<byte?> list => list.DefaultIfEmpty(null).Average(e=>(int?)e),
-				IEnumerable<short> list => list.Average(e=>(int)e),
-				IEnumerable<short?> list => list.DefaultIfEmpty(null).Average(e=>(int?)e),
+				IEnumerable<byte> list => list.Average(e=>e),
+				IEnumerable<byte?> list => list.DefaultIfEmpty(null).Average(e=>e),
+				IEnumerable<short> list => list.Average(e=>e),
+				IEnumerable<short?> list => list.DefaultIfEmpty(null).Average(e=>e),
 				IEnumerable<int> list => list.Average(),
 				IEnumerable<int?> list => list.DefaultIfEmpty(null).Average(),
 				IEnumerable<long> list => list.Average(),

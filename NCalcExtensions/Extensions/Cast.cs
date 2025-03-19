@@ -37,6 +37,5 @@ internal static class Cast
 
 		var result = Convert.ChangeType(inputObject, castType, cultureInfo);
 		functionArgs.Result = result;
-		return;
-	}
+    }
 }

@@ -19,16 +19,14 @@ public static partial class DB {
                                             IClientSessionHandle? session = null,
                                             CancellationToken cancellation = default) where T : IEntity {
         if (entity is DocumentEntity ent) {
-            await MigrateEntity(ent, cancellation);
+            await ApplyMigrations(ent, cancellation);
         }
         PrepAndCheckIfInsert(entity);
-
         if (session == null) {
             await Collection<T>().InsertOneAsync(entity, null, cancellation);
         } else {
             await Collection<T>().InsertOneAsync(session, entity, null, cancellation);
         }
-        /*return session == null ? Collection<T>().InsertOneAsync(entity, null, cancellation) : Collection<T>().InsertOneAsync(session, entity, null, cancellation);*/
     }
 
     /// <summary>
@@ -44,7 +42,7 @@ public static partial class DB {
         var models = new List<WriteModel<T>>(entities.Count());
         foreach (var entity in entities) {
             if (entity is DocumentEntity ent) {
-                await DB.MigrateEntity(ent, cancellation);
+                await ApplyMigrations(ent, cancellation);
             }
             PrepAndCheckIfInsert(entity);
             models.Add(new InsertOneModel<T>(entity));
@@ -52,12 +50,8 @@ public static partial class DB {
 
         if (session == null) {
             return await Collection<T>().BulkWriteAsync(models,_unOrdBlkOpts, cancellation);
-        } else {
-            return await Collection<T>().BulkWriteAsync(session,models,_unOrdBlkOpts, cancellation);
         }
 
-        /*return session == null
-                   ? Collection<T>().BulkWriteAsync(models, _unOrdBlkOpts, cancellation)
-                   : Collection<T>().BulkWriteAsync(session, models, _unOrdBlkOpts, cancellation);*/
+        return await Collection<T>().BulkWriteAsync(session,models,_unOrdBlkOpts, cancellation);
     }
 }

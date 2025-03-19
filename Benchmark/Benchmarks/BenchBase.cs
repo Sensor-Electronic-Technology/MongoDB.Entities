@@ -1,7 +1,7 @@
-﻿using MongoDB.Driver;
-using MongoDB.Entities;
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using MongoDB.Driver;
+using MongoDB.Entities;
 
 namespace Benchmark;
 

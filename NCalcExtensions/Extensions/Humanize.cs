@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
-using NCalcExtensions.Helpers;
 using NCalcExtensions.Exceptions;
+using NCalcExtensions.Helpers;
 
 namespace NCalcExtensions.Extensions;
 
