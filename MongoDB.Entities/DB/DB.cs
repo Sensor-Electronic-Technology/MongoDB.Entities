@@ -55,11 +55,14 @@ public static partial class DB {
     /// <param name="port">Port number of the server</param>
     /// <param name="enableLogging">Enable internal logging</param>
     /// <param name="assemblies">assemblies to scan for types of DocumentEntity</param>
-    public static Task InitAsync(string database, string host = "127.0.0.1", int port = 27017, 
+    public static Task InitAsync(string database,
+                                 string host = "127.0.0.1",
+                                 int port = 27017,
                                  bool enableLogging = false,
-                                 params Assembly[] assemblies) { 
+                                 params Assembly[] assemblies) {
         LoggingEnabled = enableLogging;
-        return InitializeWithTypeConfig(new() { Server = new(host, port) }, database,assemblies:assemblies);   
+
+        return InitializeWithTypeConfig(new() { Server = new(host, port) }, database, assemblies: assemblies);
     }
 
     /// <summary>
@@ -72,7 +75,7 @@ public static partial class DB {
     /// <param name="settings">A MongoClientSettings object</param>
     public static Task InitAsync(string database, MongoClientSettings settings)
         => Initialize(settings, database);
-    
+
     /// <summary>
     /// Initializes a MongoDB connection, scans given assemblies for DocumentEntity types,
     /// and preloads TypeConfiguration for the types scanned from the assemblies
@@ -85,16 +88,19 @@ public static partial class DB {
     /// <param name="port">Port number of the server</param>
     public static Task InitAsync(string database, string host = "127.0.0.1", int port = 27017)
         => Initialize(new() { Server = new(host, port) }, database);
-    
-    internal static async Task InitializeWithTypeConfig(MongoClientSettings settings, string dbName, bool skipNetworkPing = false,params Assembly[] assemblies) {
-        Log(LogLevel.Information,"Initializing database...");
+
+    internal static async Task InitializeWithTypeConfig(MongoClientSettings settings,
+                                                        string dbName,
+                                                        bool skipNetworkPing = false,
+                                                        params Assembly[] assemblies) {
+        Log(LogLevel.Information, "Initializing database...");
 
         if (string.IsNullOrEmpty(dbName)) {
-            var exception = new ArgumentNullException(nameof(dbName),"Database name cannot be empty!");
-            Log(logLevel:LogLevel.Critical,"Database name empty", exception);
+            var exception = new ArgumentNullException(nameof(dbName), "Database name cannot be empty!");
+            Log(logLevel: LogLevel.Critical, "Database name empty", exception);
+
             throw exception;
         }
-            
 
         if (_dbs.ContainsKey(dbName)) {
             return;
@@ -106,29 +112,32 @@ public static partial class DB {
             if (_dbs.Count == 0) {
                 _defaultDb = db;
             }
-            
+
             if (_dbs.TryAdd(dbName, db) && !skipNetworkPing) {
                 await db.RunCommandAsync((Command<BsonDocument>)"{ping:1}").ConfigureAwait(false);
             }
-            await ScanAssemblies();
+            await ScanAssemblies(assemblies);
             InitTypeConfigWatcher();
         } catch (Exception e) {
-            Log(LogLevel.Critical,"Failed to initialize database", e);
+            Log(LogLevel.Critical, "Failed to initialize database", e);
             _dbs.TryRemove(dbName, out _);
+
             throw;
         }
     }
 
     internal static async Task ScanAssemblies(params Assembly[] assemblies) {
-        Log(LogLevel.Information,"Scanning assemblies for DocumentEntities");
+        Log(LogLevel.Information, "Scanning assemblies for DocumentEntities");
         var typeConfigCollection = Cache<TypeConfiguration>.Collection;
+
         foreach (var assembly in assemblies) {
-            var types=assembly.DefinedTypes.Where(e => e.BaseType == typeof(DocumentEntity)).ToList();
+            var types = assembly.DefinedTypes.Where(e => e.BaseType == typeof(DocumentEntity)).ToList();
+
             foreach (var type in types) {
                 var collectionAttribute = type.GetCustomAttribute<CollectionAttribute>(false);
                 var collectionName = collectionAttribute != null ? collectionAttribute.Name : type.Name;
-                var typeConfig=await typeConfigCollection.Find(e=>e.CollectionName==collectionName)
-                                                         .SingleOrDefaultAsync();
+                var typeConfig = await typeConfigCollection.Find(e => e.CollectionName == collectionName)
+                                                           .SingleOrDefaultAsync();
                 TypeMap.AddUpdateTypeConfiguration(type, typeConfig);
             }
         }
@@ -140,6 +149,7 @@ public static partial class DB {
 
         if (_dbs.ContainsKey(dbName))
             return;
+
         try {
             var db = new MongoClient(settings).GetDatabase(dbName);
             if (_dbs.IsEmpty)
@@ -149,23 +159,28 @@ public static partial class DB {
                 await db.RunCommandAsync((Command<BsonDocument>)"{ping:1}").ConfigureAwait(false);
         } catch (Exception e) {
             _dbs.TryRemove(dbName, out _);
-            Log(LogLevel.Critical,"Failed to initialize database {Database}", e,dbName);
+            Log(LogLevel.Critical, "Failed to initialize database {Database}", e, dbName);
+
             throw;
         }
     }
-    
 
     internal static void InitTypeConfigWatcher() {
-        Log(LogLevel.Information,"Creating watcher for TypConfigurations");
+        Log(LogLevel.Information, "Creating watcher for TypConfigurations");
         var watcher = Watcher<TypeConfiguration>("type_config_internal_watcher");
-        watcher.Start(eventTypes: EventType.Created | EventType.Updated | EventType.Deleted,
+        watcher.Start(
+            eventTypes: EventType.Created | EventType.Updated | EventType.Deleted,
             batchSize: 5,
             onlyGetIDs: false,
             autoResume: true,
             cancellation: CancellationToken.None);
         watcher.OnChangesCSD += HandleTypeConfigChanges;
+        watcher.OnError += (exception) => {
+            Log(LogLevel.Critical, "Watcher error", exception);
+        };
         watcher.OnStop += () => {
             Log(LogLevel.Warning, "Stopping watcher for TypConfigurations");
+
             if (watcher.CanRestart) {
                 watcher.ReStart();
                 Log(LogLevel.Information, "TypeConfigurations watcher restarted");
@@ -177,20 +192,33 @@ public static partial class DB {
 
     internal static void HandleTypeConfigChanges(IEnumerable<ChangeStreamDocument<TypeConfiguration>> changes) {
         foreach (var change in changes) {
-            var typeConfig = change.FullDocument;
-            var type=Type.GetType(typeConfig.TypeName);
-            if (type != null) {
-                switch (change.OperationType) {
-                    case ChangeStreamOperationType.Delete:
-                        AddUpdateTypeConfiguration(type,null);
-                        Log(LogLevel.Information,"Type {TypeName} is deleted from TypeConfigurationMap",args:type);
-                        break;
-                    case ChangeStreamOperationType.Insert:
-                    case ChangeStreamOperationType.Update:
-                    case ChangeStreamOperationType.Replace:
-                        AddUpdateTypeConfiguration(type,typeConfig);
-                        Log(LogLevel.Information,"Type {TypeName} Operation {Operation} completed",type,change.OperationType);
-                        break;
+            switch (change.OperationType) {
+                case ChangeStreamOperationType.Delete: {
+                    var typeConfig = change.FullDocumentBeforeChange;
+                    var type = Type.GetType(typeConfig.TypeName);
+                    if (type != null) {
+                        AddUpdateTypeConfiguration(type, null);
+                        Log(LogLevel.Information, "Type {TypeName} is deleted from TypeConfigurationMap", args: type);
+                    }
+                    break;
+                }
+
+                case ChangeStreamOperationType.Insert:
+                case ChangeStreamOperationType.Update:
+                case ChangeStreamOperationType.Replace: {
+                    var typeConfig = change.FullDocument;
+                    var type = Type.GetType(typeConfig.TypeName);
+
+                    if (type != null) {
+                        AddUpdateTypeConfiguration(type, typeConfig);
+                        Log(
+                            LogLevel.Information,
+                            "Type {TypeName} Operation {Operation} completed",
+                            type,
+                            change.OperationType);
+                    }
+
+                    break;
                 }
             }
         }
@@ -235,6 +263,7 @@ public static partial class DB {
     /// <param name="name">The name of the database to retrieve</param>
     public static IMongoDatabase Database(string? name) {
         IMongoDatabase? db = null;
+
         if (_dbs.Count == 0) {
             return db ??
                    throw new InvalidOperationException(
@@ -256,27 +285,27 @@ public static partial class DB {
     /// <typeparam name="T">Any class that implements IEntity</typeparam>
     public static string DatabaseName<T>() where T : IEntity
         => Cache<T>.DbName;
-    
+
     /// <summary>
     /// Gets the TypeConfiguration for the give type of DocumentEntity
     /// </summary>
     /// <typeparam name="TEntity">Any class that implements DocumentEntity</typeparam>
     public static TypeConfiguration? TypeConfiguration<TEntity>() where TEntity : DocumentEntity
         => TypeMap.GetTypeConfiguration(typeof(TEntity));
-    
+
     /// <summary>
     /// Gets the TypeConfiguration for the given Type of DocumentEntity
     /// </summary>
     /// <param name="type">Type of type DocumentEntity to get the TypeConfiguration for</param>
     public static TypeConfiguration? TypeConfiguration(Type type)
         => TypeMap.GetTypeConfiguration(type);
-    
+
     /// <summary>
     /// Updates the TypeConfiguration for the give type of DocumentEntity
     /// </summary>
     /// <param name="type">Type of type DocumentEntity</param>
     /// <param name="typeConfig">TypeConfiguration of the given type</param>
-    public static void AddUpdateTypeConfiguration(Type type,TypeConfiguration? typeConfig)
+    public static void AddUpdateTypeConfiguration(Type type, TypeConfiguration? typeConfig)
         => TypeMap.AddUpdateTypeConfiguration(type, typeConfig);
 
     /// <summary>
@@ -333,6 +362,7 @@ public static partial class DB {
 
         return newT;
     }
+
     /// <summary>
     /// Internal logger for DB
     /// </summary>
@@ -340,15 +370,18 @@ public static partial class DB {
     /// <param name="message"></param>
     /// <param name="exception"></param>
     /// <param name="args"></param>
-    private static void Log(LogLevel logLevel,[StructuredMessageTemplate]string message, Exception exception,params object[] args) {
+    private static void Log(LogLevel logLevel,
+                            [StructuredMessageTemplate] string message,
+                            Exception exception,
+                            params object[] args) {
         if (LoggingEnabled) {
-            _logger.Log(logLevel:logLevel,message:message,exception:exception,args:args);
+            _logger.Log(logLevel: logLevel, message: message, exception: exception, args: args);
         }
     }
-    
-    private static void Log(LogLevel logLevel,[StructuredMessageTemplate]string message,params object[] args) {
+
+    private static void Log(LogLevel logLevel, [StructuredMessageTemplate] string message, params object[] args) {
         if (LoggingEnabled) {
-            _logger.Log(logLevel:logLevel,message:message,args:args);
+            _logger.Log(logLevel: logLevel, message: message, args: args);
         }
     }
 }

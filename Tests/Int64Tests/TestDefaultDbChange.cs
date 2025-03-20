@@ -22,8 +22,8 @@ public class DefaultDatabaseChangingInt64
     [TestMethod]
     public async Task returns_correct_database()
     {
-        await DB.InitAsync("test1");
-        await DB.InitAsync("test2");
+        await DB.InitAsync("test1",host:"172.20.3.41");
+        await DB.InitAsync("test2",host:"172.20.3.41");
 
         var defaultDb = DB.Database(default);
         var database = DB.Database("test2");

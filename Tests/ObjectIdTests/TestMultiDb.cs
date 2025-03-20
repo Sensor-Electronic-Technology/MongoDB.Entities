@@ -86,8 +86,8 @@ public class MultiDbObjectId
     [TestMethod]
     public async Task multiple_initializations_should_not_throw()
     {
-        await DB.InitAsync("multi-init");
-        await DB.InitAsync("multi-init");
+        await DB.InitAsync("multi-init",host:"172.20.3.41");
+        await DB.InitAsync("multi-init",host:"172.20.3.41");
 
         var db = DB.Database("multi-init");
 

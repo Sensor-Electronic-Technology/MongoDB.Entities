@@ -8,7 +8,24 @@ using MongoDB.Entities;
 
 Console.WriteLine("Initializing Database...");
 await DB.InitAsync("epi_system", "172.20.3.41",enableLogging:true,assemblies: typeof(EpiRun).Assembly);
-await UndoRedoAll();
+TypeConfiguration? config = TypeConfiguration.CreateOnline<XrdData>();
+await config.SaveAsync();
+Console.WriteLine("TypeConfiguration saved...");
+await Task.Delay(500);
+Console.WriteLine("Deleting TypeConfiguration...");
+await config.DeleteAsync();
+Console.WriteLine("TypeConfiguration should be deleted");
+var internConfig=DB.TypeConfiguration<XrdData>();
+
+if (internConfig == null) {
+    Console.WriteLine("Configuration successfully deleted");
+} else {
+    Console.WriteLine("Error: Configuration is not null");
+}
+
+
+
+/*await UndoRedoAll();*/
 /*DocumentVersion version = new DocumentVersion();
 
 version.IncrementMajor();

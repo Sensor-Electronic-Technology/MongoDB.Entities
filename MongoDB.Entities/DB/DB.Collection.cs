@@ -84,7 +84,7 @@ public static partial class DB
                 : db.DropCollectionAsync(session, collName));
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
-
+        //Remake watcher after collection drop
         if (typeof(T) == typeof(TypeConfiguration)) {
             Cache<T>.Watchers.Clear();
             InitTypeConfigWatcher();
