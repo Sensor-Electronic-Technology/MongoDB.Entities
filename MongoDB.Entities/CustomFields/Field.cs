@@ -38,7 +38,7 @@ public class Field:IEquatable<Field> {
     public string FieldName { get; set; } = string.Empty;
     public BsonType BsonType { get; set; }
     public TypeCode TypeCode { get; set; }
-
+    
     public virtual KeyValuePair<string,FieldInfo> ToFieldInfo() {
         return new KeyValuePair<string, FieldInfo>(FieldName, new() { TypeCode = TypeCode });
     }
@@ -81,13 +81,15 @@ public class ObjectField : Field {
 }
 
 public class ValueField : Field {
+    public DataType DataType { get; set; }
     public object? DefaultValue { get; set; }
     public string? UnitName { get; set; } = string.Empty;
     public string? QuantityName { get; set; } = string.Empty;
 }
 
 public class SelectionField : Field {
-    public Dictionary<string,object> SelectionDictionary { get; set; } = new Dictionary<string,object>();
+    public DataType DataType { get; set; }
+    public Dictionary<string,object> SelectionDictionary { get; set; } = new();
     public object? DefaultValue { get; set; }
 }
 
@@ -96,13 +98,12 @@ public partial class CalculatedField:ValueField  {
     public string Expression { get; set; } = string.Empty;
     public List<Variable> Variables { get; set; } = [];
     public bool IsBooleanExpression { get; set; } = false;
-    
-    public object TrueValue { get; set; }
-    public object FalseValue { get; set; }
+    public DataType DataType { get; set; }
+    public object TrueValue { get; set; } = true;
+    public object FalseValue { get; set; } = false;
     
     [GeneratedRegex(@"\[(.*?)\]")]
     private static partial Regex MyRegex();
-
     public bool IsValid() {
          var regex = MyRegex();
          var matches=regex.Matches(Expression);
@@ -122,3 +123,4 @@ public partial class CalculatedField:ValueField  {
          return isValid;
     }
 }
+

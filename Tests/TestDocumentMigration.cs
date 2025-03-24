@@ -57,7 +57,7 @@ public class DocumentMigrations {
                                     }
                                 }
                             },
-                            VariableType = VariableType.LIST_NUMBER
+                            DataType = DataType.LIST_NUMBER
                         }
                     ]
                 },
@@ -71,7 +71,7 @@ public class DocumentMigrations {
                             Property = nameof(QtMeasurement.Wavelength),
                             VariableName = "wavelengths",
                             CollectionProperty = nameof(QuickTest.InitialMeasurements),
-                            VariableType = VariableType.LIST_NUMBER,
+                            DataType = DataType.LIST_NUMBER,
                             Filter = new() {
                                 FieldName = nameof(QtMeasurement.Power),
                                 CompareOperator = ComparisonOperator.LessThanOrEqual,

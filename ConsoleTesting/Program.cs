@@ -129,7 +129,7 @@ async Task BuildMigration() {
                                 }
                             }
                         },
-                        VariableType = VariableType.LIST_NUMBER
+                        DataType = DataType.LIST_NUMBER
                     }
                 ]
             },
@@ -143,7 +143,7 @@ async Task BuildMigration() {
                         Property = nameof(QtMeasurement.Wavelength),
                         VariableName = "wavelengths",
                         CollectionProperty = nameof(QuickTest.InitialMeasurements),
-                        VariableType = VariableType.LIST_NUMBER,
+                        DataType = DataType.LIST_NUMBER,
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Power),
                             CompareOperator = ComparisonOperator.LessThanOrEqual,
@@ -253,7 +253,7 @@ async Task BuildMigration2() {
                     Property = nameof(QtMeasurement.Voltage),
                     VariableName = "voltages",
                     CollectionProperty = nameof(QuickTest.InitialMeasurements),
-                    VariableType = VariableType.LIST_NUMBER,
+                    DataType = DataType.LIST_NUMBER,
                     Filter = filter,
                 },
             ]
@@ -304,7 +304,7 @@ async Task BuilderMigration3() {
                     new ValueVariable {
                         VariableName = "pCriteria",
                         TypeCode = TypeCode.Double,
-                        VariableType = VariableType.NUMBER,
+                        DataType = DataType.NUMBER,
                         Value = 950
                     },
                     new EmbeddedPropertyVariable {
@@ -312,7 +312,7 @@ async Task BuilderMigration3() {
                         EmbeddedProperty = "Avg. Initial Power",
                         EmbeddedObjectProperties = ["Qt Summary"],
                         Property = "AdditionalData",
-                        VariableType = VariableType.NUMBER,
+                        DataType = DataType.NUMBER,
                     }
                 ]
             },
@@ -330,19 +330,19 @@ async Task BuilderMigration3() {
                     new ValueVariable {
                         VariableName = "wlMax",
                         TypeCode = TypeCode.Double,
-                        VariableType = VariableType.NUMBER,
+                        DataType = DataType.NUMBER,
                         Value = 279.5,
                     },
                     new ValueVariable {
                         VariableName = "wlMin",
                         TypeCode = TypeCode.Double,
-                        VariableType = VariableType.NUMBER,
+                        DataType = DataType.NUMBER,
                         Value = 270.5,
                     },
                     new ValueVariable {
                         VariableName = "pCriteria",
                         TypeCode = TypeCode.Double,
-                        VariableType = VariableType.NUMBER,
+                        DataType = DataType.NUMBER,
                         Value = 950
                     },
                     new EmbeddedPropertyVariable {
@@ -350,14 +350,14 @@ async Task BuilderMigration3() {
                         EmbeddedProperty = "Avg. Initial Power",
                         EmbeddedObjectProperties = ["Qt Summary"],
                         Property = "AdditionalData",
-                        VariableType = VariableType.NUMBER,
+                        DataType = DataType.NUMBER,
                     },
                     new EmbeddedPropertyVariable {
                         VariableName = "wlAvg",
                         EmbeddedProperty = "Avg. Wl",
                         EmbeddedObjectProperties = ["Qt Summary"],
                         Property = "AdditionalData",
-                        VariableType = VariableType.NUMBER,
+                        DataType = DataType.NUMBER,
                     },
                 ]
             }
@@ -469,7 +469,7 @@ async Task CheckMigrationConflicts() {
                                 }
                             }
                         },
-                        VariableType = VariableType.LIST_NUMBER
+                        DataType = DataType.LIST_NUMBER
                     }
                 ]
             },
@@ -483,7 +483,7 @@ async Task CheckMigrationConflicts() {
                         Property = "Wavelength",
                         VariableName = "wavelengths",
                         CollectionProperty = "Measurements",
-                        VariableType = VariableType.LIST_NUMBER,
+                        DataType = DataType.LIST_NUMBER,
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Area),
                             CompareOperator = ComparisonOperator.LessThanOrEqual,
@@ -811,7 +811,7 @@ async Task TestTypeConfigAvailableProperties() {
                                 }
                             }
                         },
-                        VariableType = VariableType.LIST_NUMBER
+                        DataType = DataType.LIST_NUMBER
                     }
                 ]
             },
@@ -826,7 +826,7 @@ async Task TestTypeConfigAvailableProperties() {
                         Property = nameof(QtMeasurement.Wavelength),
                         VariableName = "wavelengths",
                         CollectionProperty = nameof(QuickTest.InitialMeasurements),
-                        VariableType = VariableType.LIST_NUMBER,
+                        DataType = DataType.LIST_NUMBER,
                         Filter = new() {
                             FieldName = nameof(QtMeasurement.Power),
                             CompareOperator = ComparisonOperator.LessThanOrEqual,

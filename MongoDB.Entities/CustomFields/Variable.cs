@@ -13,7 +13,7 @@ namespace MongoDB.Entities;
      typeof(EmbeddedPropertyVariable))]
 public class Variable {
     public string VariableName { get; set; } = null!;
-    public VariableType VariableType { get; set; }
+    public DataType DataType { get; set; }
 }
 /// <summary>
 /// Property from the owning entity

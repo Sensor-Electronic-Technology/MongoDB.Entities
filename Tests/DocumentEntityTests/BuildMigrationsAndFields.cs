@@ -32,6 +32,8 @@ public class Fields {
                 new CalculatedField {
                     FieldName = "Avg. Initial Power",
                     BsonType = BsonType.Double,
+                    TypeCode = TypeCode.Double,
+                    DataType = DataType.NUMBER,
                     DefaultValue = 0.00,
                     Expression = "avg([powers])",
                     Variables = [
@@ -67,13 +69,15 @@ public class Fields {
                                     }
                                 }
                             },
-                            VariableType = VariableType.LIST_NUMBER
+                            DataType = DataType.LIST_NUMBER
                         }
                     ]
                 },
                 new CalculatedField {
                     FieldName = "Avg. Wl",
                     BsonType = BsonType.Double,
+                    TypeCode = TypeCode.Double, 
+                    DataType = DataType.NUMBER,
                     DefaultValue = 0.00,
                     Expression = "avg([wavelengths])",
                     Variables = [
@@ -81,7 +85,7 @@ public class Fields {
                             Property = nameof(QtMeasurement.Wavelength),
                             VariableName = "wavelengths",
                             CollectionProperty = nameof(QuickTest.InitialMeasurements),
-                            VariableType = VariableType.LIST_NUMBER,
+                            DataType = DataType.LIST_NUMBER,
                             Filter = new() {
                                 FieldName = nameof(QtMeasurement.Power),
                                 CompareOperator = ComparisonOperator.LessThanOrEqual,
@@ -160,11 +164,65 @@ public class Fields {
                 Assert.IsTrue(doc.Contains(field.FieldName));
                 var objDoc=doc[field.FieldName].AsBsonDocument;
                 Assert.IsNotNull(objDoc);
-
                 foreach (var subField in objField.Fields) {
                     Assert.IsTrue(objDoc.Contains(subField.FieldName));
                 }
             }
         }
+    }
+
+    [TestMethod]
+    public async Task test_migrate_selection_field() {
+        ObjectField objField = new ObjectField {
+            FieldName = "Qt Summary",
+            BsonType = BsonType.Document,
+            TypeCode = TypeCode.Object,
+            Fields = [
+                new SelectionField() {
+                    FieldName = "PassFail",
+                    BsonType = BsonType.String,
+                    DefaultValue = "Pass",
+                    SelectionDictionary = new() {
+                        { "Pass", "Value1" },
+                        { "Fail", "Value2" }
+                    },
+                    TypeCode = TypeCode.String
+                },
+                new SelectionField() {
+                    FieldName = "AvailableOptions",
+                    BsonType = BsonType.Double,
+                    DefaultValue = 0.00,
+                    TypeCode = TypeCode.Double,
+                    SelectionDictionary = new() {
+                        { "Option 1", 0.00 },
+                        { "Option 2", 1.50},
+                        { "Option 3", 2.54},
+                        { "Option 4", 3.56},
+                        { "Option 5", 7.65},
+                    }
+                },
+                new SelectionField() {
+                    FieldName = "PersonInCharge",
+                    BsonType = BsonType.Array,
+                    DefaultValue = "PersonInCharge",
+                    SelectionDictionary = new() {
+                        { "Andrew", "Andrew Elmendorf,aelmendorf@s-et.com" },
+                        { "Rakesh", "Rakesh Jain,rjain@s-et.com"},
+                        { "Graci", "Graci Hill,ghill@s-et.com"},
+                    }
+                }
+            ]
+        };
+
+        
+    }
+
+    [ClassCleanup]
+    public static async Task Cleanup() {
+        await DB.DropCollectionAsync<EpiRun>();
+        await DB.DropCollectionAsync<QuickTest>();
+        await DB.DropCollectionAsync<XrdData>();
+        await DB.DropCollectionAsync<DocumentMigration>();
+        await DB.DropCollectionAsync<TypeConfiguration>();
     }
 }
