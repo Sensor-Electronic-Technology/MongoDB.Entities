@@ -14,7 +14,7 @@ public abstract class BenchBase
 
     static BenchBase()
     {
-        DB.InitAsync(DBName).GetAwaiter().GetResult();
+        DB.InitAsync(DBName,host:"172.20.3.41").GetAwaiter().GetResult();
         DB.Database(DBName).Client.DropDatabase(DBName);
         Database = DB.Database(default);
         AuthorCollection = DB.Collection<Author>();
