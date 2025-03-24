@@ -1,56 +1,42 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <Version>0.1.1-beta</Version>
-        <TargetFramework>net9.0</TargetFramework>
-        <RootNamespace>MongoDB.Entities</RootNamespace>
-        <AssemblyName>MongoDB.Entities</AssemblyName>
-<!--    <Authors>Đĵ ΝιΓΞΗΛψΚ</Authors>
-       <Description>A data access library for MongoDB with an elegant api, LINQ support and built-in entity relationship management.</Description>
-       <PackageProjectUrl>https://mongodb-entities.com</PackageProjectUrl>
-       <Copyright>Đĵ ΝιΓΞΗΛψΚ</Copyright>
-       <PackageId>MongoDB.Entities</PackageId>
-       <Product>MongoDB.Entities</Product>
-       
-       <RepositoryType>git</RepositoryType>
-       <PublishRepositoryUrl>true</PublishRepositoryUrl>
-       <PackageLicenseExpression>MIT</PackageLicenseExpression>
-       <PackageIcon>icon.png</PackageIcon>
-       <PackageReadmeFile>README.md</PackageReadmeFile>-->
-        <PackageId>SETi.MongoDB.Entities</PackageId>
-        <Product>SETi.MongoDB.Entities</Product>
-        <RepositoryType>git</RepositoryType>
-        <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <RepositoryUrl>https://github.com/Sensor-Electronic-Technology/MongoDB.Entities.git</RepositoryUrl>
-        <PackageTags>mongodb mongodb-orm mongodb-repo mongodb-repository entities nosql orm linq netcore repository aspnetcore dotnetstandard database persistance dal repo</PackageTags>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <LangVersion>latest</LangVersion>
-        <EmbedUntrackedSources>true</EmbedUntrackedSources>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-        <Nullable>enable</Nullable>
-        <NoWarn>CS1591</NoWarn>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Ardalis.SmartEnum" Version="8.2.0" />
-        <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
-        <PackageReference Include="MongoDB.Driver" Version="3.2.0"/>
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
-        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.0.2" />
-        <PackageReference Include="FastCloner" Version="3.3.2" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false"/>
-        <None Include="..\Artwork\icon.png" Pack="true" PackagePath="\" Visible="false"/>
-        <None Remove="mongod.cfg"/>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\NCalcExtensions\NCalcExtensions.csproj" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <Version>0.1.5-beta</Version>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>MongoDB.Entities</RootNamespace>
+    <AssemblyName>MongoDB.Entities</AssemblyName>
+    <PackageId>SETi.MongoDB.Entities</PackageId>
+    <Product>SETi.MongoDB.Entities</Product>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <RepositoryUrl>https://github.com/Sensor-Electronic-Technology/MongoDB.Entities.git</RepositoryUrl>
+    <PackageTags>mongodb mongodb-orm mongodb-repo mongodb-repository entities nosql orm linq netcore repository aspnetcore dotnetstandard database persistance dal repo</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>latest</LangVersion>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS1591</NoWarn>
+    <UserSecretsId>c9b2a8b0-7a74-4443-ad7e-610c6b4b184b</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Ardalis.SmartEnum" Version="8.2.0" />
+    <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
+    <PackageReference Include="MongoDB.Driver" Version="3.2.0" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.0.2" />
+    <PackageReference Include="FastCloner" Version="3.3.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
+    <PackageReference Include="CoreCLR-NCalc" Version="3.1.253" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Formats.Asn1" Version="9.0.0" />
+    <PackageReference Include="TimeZoneConverter" Version="6.1.0" />
+    <ProjectReference Include="..\Extensions\Extensions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\Artwork\icon.png" Pack="true" PackagePath="\" Visible="false" />
+    <None Remove="mongod.cfg" />
+  </ItemGroup>
 </Project>

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using Ardalis.GuardClauses;
 using Extensions.Gaurd;
 
-namespace EpiSystem.Extensions.Collection.Generic;
+namespace Extensions;
 
 public static class EnumerableExtensions {
     public static double Median(this IEnumerable<int> source) {

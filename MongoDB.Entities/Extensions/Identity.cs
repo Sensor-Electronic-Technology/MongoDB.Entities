@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using MongoDB.Bson.Serialization.Attributes;
+using Expression = System.Linq.Expressions.Expression;
 
 namespace MongoDB.Entities;
 

@@ -7,6 +7,7 @@ using System.Reflection;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
+using Expression = System.Linq.Expressions.Expression;
 
 namespace MongoDB.Entities;
 
