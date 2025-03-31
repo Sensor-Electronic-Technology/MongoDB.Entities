@@ -9,7 +9,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\MongoDB.Entities\MongoDB.Entities.csproj" />
-      <ProjectReference Include="..\NCalcExtensions\NCalcExtensions.csproj" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.13.0" />

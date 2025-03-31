@@ -1,8 +1,24 @@
 ﻿using System.Collections.ObjectModel;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Entities;
 
 namespace ConsoleTesting;
+
+public class TemplateRun : IDocumentEntity, ICreatedOn, IModifiedOn {
+    
+    [BsonId]
+    public string WaferId { get; set; }
+    
+    public object GenerateNewID() => throw new NotImplementedException();
+
+    public bool HasDefaultID() => false;
+    
+    public BsonDocument AdditionalData { get; set; }
+    public DocumentVersion Version { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public DateTime ModifiedOn { get; set; }
+}
 
 [Collection("epi_runs")]
 public class EpiRun : DocumentEntity,ICreatedOn,IModifiedOn {

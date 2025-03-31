@@ -8,7 +8,14 @@ using MongoDB.Entities;
 
 Console.WriteLine("Initializing Database...");
 await DB.InitAsync("epi_system", "172.20.3.41",enableLogging:true,assemblies: typeof(EpiRun).Assembly);
-TypeConfiguration? config = TypeConfiguration.CreateOnline<XrdData>();
+
+TemplateRun run = new TemplateRun() {
+    WaferId = "A01-0001-01"
+};
+await run.SaveAsync();
+Console.WriteLine("Check Database");
+
+/*TypeConfiguration? config = TypeConfiguration.CreateOnline<XrdData>();
 await config.SaveAsync();
 Console.WriteLine("TypeConfiguration saved...");
 await Task.Delay(500);
@@ -21,7 +28,7 @@ if (internConfig == null) {
     Console.WriteLine("Configuration successfully deleted");
 } else {
     Console.WriteLine("Error: Configuration is not null");
-}
+}*/
 
 
 

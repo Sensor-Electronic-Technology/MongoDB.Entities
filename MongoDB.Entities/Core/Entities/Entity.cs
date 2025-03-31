@@ -46,3 +46,4 @@ public abstract class DocumentEntity : IEntity {
     public virtual bool HasDefaultID()
         => string.IsNullOrEmpty(ID);
 }
+
