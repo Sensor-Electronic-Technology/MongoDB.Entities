@@ -24,6 +24,6 @@ public interface IEntity
 }
 
 public interface IDocumentEntity:IEntity {
-    public BsonDocument AdditionalData { get; set; }
+    public BsonDocument? AdditionalData { get; set; }
     public DocumentVersion Version { get; set; }
 }
