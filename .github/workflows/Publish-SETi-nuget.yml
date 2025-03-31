@@ -17,7 +17,7 @@ jobs:
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.NUGET_TOKEN }}
       - name: Make Nuget Packages
-        run: dotnet pack MongoDB.Entities/MongoDB.Entities.csproj -c Release -IncludeReferencedProjects
+        run: dotnet pack MongoDB.Entities/MongoDB.Entities.csproj -c Release
       - name: Publish To Nuget
         run: dotnet nuget push MongoDB.Entities/bin/Release/*.nupkg --skip-duplicate
 
