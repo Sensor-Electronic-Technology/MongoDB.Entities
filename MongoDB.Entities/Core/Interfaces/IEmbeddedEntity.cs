@@ -3,5 +3,5 @@
 namespace MongoDB.Entities;
 
 public interface IEmbeddedEntity {
-    public BsonDocument AdditionalData { get; set; }
+    public BsonDocument? AdditionalData { get; set; }
 }

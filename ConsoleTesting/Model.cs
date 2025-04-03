@@ -108,7 +108,7 @@ public class QtMeasurement:IEmbeddedEntity {
     public double Voltage { get; set; }
     public double Current { get; set; }
     public double Wavelength { get; set; }
-    public BsonDocument AdditionalData { get; set; }
+    public BsonDocument? AdditionalData { get; set; }
 }
 
 
@@ -125,7 +125,7 @@ public class XrdMeasurement:IEmbeddedEntity {
     public double dOmega { get; set; }
     public double FHWM102 { get; set; }
 
-    public BsonDocument AdditionalData { get; set; }
+    public BsonDocument? AdditionalData { get; set; }
 }
 
 [Collection("run_monitoring")]
