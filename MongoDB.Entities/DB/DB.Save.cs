@@ -353,8 +353,7 @@ public static partial class DB
     }
 
     static bool PrepAndCheckIfInsert<T>(T entity) where T : IEntity {
-        if (entity.HasDefaultID())
-        {
+        if (entity.HasDefaultID()) {
             entity.SetId(entity.GenerateNewID());
             if (Cache<T>.HasCreatedOn)
                 ((ICreatedOn)entity).CreatedOn = DateTime.UtcNow;
@@ -363,7 +362,8 @@ public static partial class DB
 
             return true;
         }
-
+        if(Cache<T>.HasCreatedOn && ((ICreatedOn)entity).CreatedOn==DateTime.MinValue)
+            ((ICreatedOn)entity).CreatedOn = DateTime.UtcNow;
         if (Cache<T>.HasModifiedOn)
             ((IModifiedOn)entity).ModifiedOn = DateTime.UtcNow;
 

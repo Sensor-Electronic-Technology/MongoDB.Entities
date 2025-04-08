@@ -2,53 +2,20 @@
 
 using ConsoleTesting;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MongoDB.Entities;
 
 Console.WriteLine("Initializing Database...");
-await DB.InitAsync("epi_system", "172.20.3.41",enableLogging:true,assemblies: typeof(EpiRun).Assembly);
+await DB.InitAsync("test_created_on", "172.20.3.41",enableLogging:true,assemblies: typeof(TestCreated).Assembly);
 
-TemplateRun run = new TemplateRun() {
-    WaferId = "A01-0001-01"
-};
-await run.SaveAsync();
-Console.WriteLine("Check Database");
+/*TestCreated test = new TestCreated();
+test.WaferId = "W01-5432-005";
+await test.SaveAsync();*/
 
-/*TypeConfiguration? config = TypeConfiguration.CreateOnline<XrdData>();
-await config.SaveAsync();
-Console.WriteLine("TypeConfiguration saved...");
-await Task.Delay(500);
-Console.WriteLine("Deleting TypeConfiguration...");
-await config.DeleteAsync();
-Console.WriteLine("TypeConfiguration should be deleted");
-var internConfig=DB.TypeConfiguration<XrdData>();
-
-if (internConfig == null) {
-    Console.WriteLine("Configuration successfully deleted");
-} else {
-    Console.WriteLine("Error: Configuration is not null");
-}*/
-
-
-
-/*await UndoRedoAll();*/
-/*DocumentVersion version = new DocumentVersion();
-
-version.IncrementMajor();
-Console.WriteLine($"Version: {version}");
-Console.WriteLine("Incrementing...");
-for (int i = 0; i < 50; i++) {
-    version.Increment();
-    Console.WriteLine($"Version: {version}");
-}
-Console.WriteLine("Decrementing...");
-for (int i = 0; i < 52; i++) {
-    version.Decrement();
-    Console.WriteLine($"Version: {version}");
-}*/
-
-
+var test2 = await DB.Find<TestCreated>().Match(e => e.WaferId == "W01-5432-005").ExecuteSingleAsync();
+await test2.SaveAsync();
 
 async Task UndoRedoAll() {
     Console.WriteLine("Dropping database...");
@@ -879,3 +846,14 @@ async Task TestTypeConfigAvailableProperties() {
     }
 }
 
+
+public class TestCreated : IDocumentEntity, ICreatedOn, IModifiedOn {
+    [BsonId] public string WaferId { get; set; }
+    public object GenerateNewID()=>string.Empty;
+
+    public bool HasDefaultID() => false;
+    public BsonDocument? AdditionalData { get; set; }
+    public DocumentVersion Version { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public DateTime ModifiedOn { get; set; }
+}
