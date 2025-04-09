@@ -8,14 +8,70 @@ using MongoDB.Driver.Linq;
 using MongoDB.Entities;
 
 Console.WriteLine("Initializing Database...");
-await DB.InitAsync("test_created_on", "172.20.3.41",enableLogging:true,assemblies: typeof(TestCreated).Assembly);
+
 
 /*TestCreated test = new TestCreated();
-test.WaferId = "W01-5432-005";
-await test.SaveAsync();*/
+test.WaferId = "W01-5432-006";
+await test.SaveAsync();
 
-var test2 = await DB.Find<TestCreated>().Match(e => e.WaferId == "W01-5432-005").ExecuteSingleAsync();
-await test2.SaveAsync();
+List<TestMany> manys = [];
+
+for (int i = 1; i < 10; i++) {
+    manys.Add(
+        new TestMany() {
+            SomeId = $"W{i}",
+            TestCreated = test.ToReference()
+        });
+}
+await manys.SaveAsync();
+await test.TestManys.AddAsync(manys);
+Console.WriteLine("Check database");*/
+
+/*var test2 = await DB.Find<TestCreated>().Match(e => e.WaferId == "W01-5432-005").ExecuteSingleAsync();
+await test2.SaveAsync();*/
+await TestOneToMany();
+
+async Task TestOneToMany() {
+    await DB.InitAsync("test_one_to_many", "172.20.3.41");
+
+    //create author and his books
+    var author = new Author { Name = "Author One" };
+    await author.SaveAsync();
+
+    var books = new[] {
+        new Book { Title = "Book One", Author = author.ToReference() },
+        new Book { Title = "Book Two", Author = author.ToReference() }
+    };
+
+    await books.SaveAsync();
+
+    await author.Books.AddAsync(books);
+
+    //retrieve all books of author
+
+    var allBooks = await author.Books
+                               .ChildrenQueryable()
+                               .ToListAsync();
+
+    //retrieve first book of author
+
+    var firstBook = await author.Books
+                                .ChildrenQueryable()
+                                .Where(b => b.Title == "Book One")
+                                .ToListAsync();
+
+    //retrieve author together with all of his books
+
+    var authorWithBooks = await DB.Fluent<Author>()
+                                  .Match(a => a.ID == author.ID)
+                                  .Lookup<Author, Book, AuthorWithBooks>(
+                                      DB.Collection<Book>(),
+                                      a => a.ID,
+                                      b => b.Author.ID,
+                                      awb => awb.AllBooks)
+                                  .ToListAsync();
+    Console.WriteLine(authorWithBooks.Count);
+}
 
 async Task UndoRedoAll() {
     Console.WriteLine("Dropping database...");
@@ -55,7 +111,7 @@ async Task BuildMigration() {
     var migrationNumber = await DB.Collection<DocumentMigration>()
                                   .Find(_ => true)
                                   .SortByDescending(e => e.MigrationNumber)
-                                  .Project(e=>e.MigrationNumber)
+                                  .Project(e => e.MigrationNumber)
                                   .FirstOrDefaultAsync();
     Console.WriteLine("Migration Number: " + migrationNumber);
 
@@ -153,13 +209,16 @@ async Task BuildMigration() {
     };
     builder.AddField(objField);
     TypeConfiguration? typeConfig = TypeConfiguration.CreateOnline<QuickTest>();
+
     if (typeConfig == null) {
         Console.WriteLine("TypeConfiguration.CreateOnly failed!");
+
         return;
     }
     await typeConfig.SaveAsync();
-    var migration = builder.Build(typeConfig,migrationNumber);
+    var migration = builder.Build(typeConfig, migrationNumber);
     await migration.SaveAsync();
+
     //migration.TypeConfiguration = typeConfig.ToReference();
     await typeConfig.Migrations.AddAsync(migration);
     await migration.SaveAsync();
@@ -170,7 +229,7 @@ async Task BuildMigration2() {
     var migrationNumber = await DB.Collection<DocumentMigration>()
                                   .Find(_ => true)
                                   .SortByDescending(e => e.MigrationNumber)
-                                  .Project(e=>e.MigrationNumber)
+                                  .Project(e => e.MigrationNumber)
                                   .FirstOrDefaultAsync();
     var collectionName = DB.CollectionName<QuickTest>();
     var typeConfig = await DB.Collection<TypeConfiguration>()
@@ -179,12 +238,14 @@ async Task BuildMigration2() {
 
     if (typeConfig == null) {
         Console.WriteLine("TypeConfiguration not found");
+
         return;
     }
-    var field = typeConfig.Fields.FirstOrDefault(e=>e.FieldName=="Qt Summary");
+    var field = typeConfig.Fields.FirstOrDefault(e => e.FieldName == "Qt Summary");
 
     if (field == null) {
         Console.WriteLine("Field not found");
+
         return;
     }
     var updatedField = FastCloner.FastCloner.DeepClone(field as ObjectField);
@@ -216,6 +277,7 @@ async Task BuildMigration2() {
             }
         }
     };
+
     if (updatedField != null) {
         var voltAvg = new CalculatedField {
             FieldName = "Avg. Voltage",
@@ -235,7 +297,7 @@ async Task BuildMigration2() {
         updatedField.Fields.Add(voltAvg);
         MigrationBuilder builder = new MigrationBuilder();
         builder.AlterField(updatedField, field);
-        var migration = builder.Build(typeConfig,migrationNumber);
+        var migration = builder.Build(typeConfig, migrationNumber);
         await migration.SaveAsync();
         Console.WriteLine("Migration Added");
     } else {
@@ -256,6 +318,7 @@ async Task BuilderMigration3() {
 
     if (typeConfig == null) {
         Console.WriteLine("TypeConfiguration not found");
+
         return;
     }
 
@@ -339,7 +402,7 @@ async Task BuilderMigration3() {
     };
     MigrationBuilder builder = new MigrationBuilder();
     builder.AddField(objField);
-    var migration = builder.Build(typeConfig,migrationNumber);
+    var migration = builder.Build(typeConfig, migrationNumber);
     await migration.SaveAsync();
     Console.WriteLine("Migration saved");
 }
@@ -846,14 +909,45 @@ async Task TestTypeConfigAvailableProperties() {
     }
 }
 
+public class TestCreated : DocumentEntity {
+    public string? WaferId { get; set; }
 
-public class TestCreated : IDocumentEntity, ICreatedOn, IModifiedOn {
-    [BsonId] public string WaferId { get; set; }
-    public object GenerateNewID()=>string.Empty;
+    public Many<TestMany, TestCreated> TestManys { get; set; }
 
-    public bool HasDefaultID() => false;
+    /*public object GenerateNewID()
+        => string.Empty;
+
+    public bool HasDefaultID()
+        => false;
+
     public BsonDocument? AdditionalData { get; set; }
     public DocumentVersion Version { get; set; }
     public DateTime CreatedOn { get; set; }
-    public DateTime ModifiedOn { get; set; }
+    public DateTime ModifiedOn { get; set; }*/
+
+    public TestCreated() {
+        this.InitOneToMany(() => this.TestManys);
+    }
+}
+
+public class TestMany : DocumentEntity {
+    public string? SomeId { get; set; }
+    public One<TestCreated>? TestCreated { get; set; }
+}
+
+public class Author : Entity {
+    public string Name { get; set; }
+    public Many<Book, Author> Books { get; set; }
+
+    public Author()
+        => this.InitOneToMany(() => Books);
+}
+
+public class Book : Entity {
+    public string Title { get; set; }
+    public One<Author> Author { get; set; }
+}
+
+public class AuthorWithBooks : Author {
+    public Book[] AllBooks { get; set; }
 }
