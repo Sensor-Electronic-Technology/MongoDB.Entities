@@ -1,13 +1,12 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace MongoDB.Entities;
 
 /// <summary>
-/// Inherit this class for all entities you want to store in their own collection.
+/// Inherit this class for managed ID and Additional data
 /// </summary>
-public abstract class Entity : IEntity
-{
+public abstract class DocumentEntity : IDocumentEntity {
     /// <summary>
     /// This property is auto managed. A new ID will be assigned for new entities upon saving.
     /// </summary>
@@ -23,4 +22,6 @@ public abstract class Entity : IEntity
     /// <inheritdoc />
     public virtual bool HasDefaultID()
         => string.IsNullOrEmpty(ID);
+    public BsonDocument? AdditionalData { get; set; }
+    public DocumentVersion Version { get; set; }
 }

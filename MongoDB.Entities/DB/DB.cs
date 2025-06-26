@@ -131,7 +131,7 @@ public static partial class DB {
         var typeConfigCollection = Cache<TypeConfiguration>.Collection;
 
         foreach (var assembly in assemblies) {
-            var types = assembly.DefinedTypes.Where(e => e.BaseType == typeof(DocumentEntity)).ToList();
+            var types = assembly.DefinedTypes.Where(e => e.BaseType == typeof(IDocumentEntity)).ToList();
 
             foreach (var type in types) {
                 var collectionAttribute = type.GetCustomAttribute<CollectionAttribute>(false);
@@ -290,7 +290,7 @@ public static partial class DB {
     /// Gets the TypeConfiguration for the give type of DocumentEntity
     /// </summary>
     /// <typeparam name="TEntity">Any class that implements DocumentEntity</typeparam>
-    public static TypeConfiguration? TypeConfiguration<TEntity>() where TEntity : DocumentEntity
+    public static TypeConfiguration? TypeConfiguration<TEntity>() where TEntity : IDocumentEntity
         => TypeMap.GetTypeConfiguration(typeof(TEntity));
 
     /// <summary>

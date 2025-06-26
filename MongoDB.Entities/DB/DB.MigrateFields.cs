@@ -213,7 +213,7 @@ public static partial class DB {
     /// <param name="cancellation">Optional Cancellation Token</param>
     /// <typeparam name="TEntity">Restricted to type DocumentMigration</typeparam>
     public static async Task ApplyMigrations<TEntity>(TEntity entity, CancellationToken cancellation = default)
-        where TEntity : DocumentEntity {
+        where TEntity : IDocumentEntity {
         var typeConfig = TypeConfiguration<TEntity>() ??
                          await Find<TypeConfiguration>()
                                .Match(e => e.CollectionName == CollectionName<TEntity>())

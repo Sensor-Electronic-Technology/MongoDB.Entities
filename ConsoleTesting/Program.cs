@@ -29,6 +29,7 @@ Console.WriteLine("Check database");*/
 
 /*var test2 = await DB.Find<TestCreated>().Match(e => e.WaferId == "W01-5432-005").ExecuteSingleAsync();
 await test2.SaveAsync();*/
+
 await TestOneToMany();
 
 async Task TestOneToMany() {

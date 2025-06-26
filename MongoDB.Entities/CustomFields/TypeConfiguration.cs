@@ -35,7 +35,7 @@ public class TypeConfiguration:Entity {
         
     }
 
-    public static TypeConfiguration? Create<TEntity>(string collectionName, string databaseName) where TEntity : DocumentEntity {
+    public static TypeConfiguration? Create<TEntity>(string collectionName, string databaseName) where TEntity : IDocumentEntity {
         var typeConfig= new TypeConfiguration {
             CollectionName = collectionName,
             DatabaseName = databaseName,
@@ -56,7 +56,7 @@ public class TypeConfiguration:Entity {
         return typeConfig;
     }
     
-    public static TypeConfiguration? CreateOnline<TEntity>() where TEntity : DocumentEntity {
+    public static TypeConfiguration? CreateOnline<TEntity>() where TEntity : IDocumentEntity {
         var typeConfig= new TypeConfiguration {
             CollectionName = DB.CollectionName<TEntity>(),
             DatabaseName = DB.DatabaseName<TEntity>(),
@@ -72,7 +72,7 @@ public class TypeConfiguration:Entity {
         typeConfig.AvailableProperties = [];
 
         foreach (var prop in type.GetProperties()) {
-            if (prop.Name == nameof(DocumentEntity.AdditionalData))
+            if (prop.Name == nameof(IDocumentEntity.AdditionalData))
                 continue;
             typeConfig.AvailableProperties.Add(prop.Name, new(){TypeCode = Type.GetTypeCode(prop.PropertyType)});
         }
@@ -86,7 +86,7 @@ public class TypeConfiguration:Entity {
         }
         AvailableProperties.Clear();
         foreach (var prop in type.GetProperties()) {
-            if (prop.Name == nameof(DocumentEntity.AdditionalData))
+            if (prop.Name == nameof(IDocumentEntity.AdditionalData))
                 continue;
             AvailableProperties.Add(prop.Name, new(){TypeCode = Type.GetTypeCode(prop.PropertyType)});
         }

@@ -14,8 +14,7 @@ namespace MongoDB.Entities;
 /// <para>TIP: Specify a filter first with the .Match(). Then set property values with .Modify() and finally call .Execute() to run the command.</para>
 /// </summary>
 /// <typeparam name="T">Any class that implements IEntity</typeparam>
-public class UpdateAndGet<T> : UpdateAndGet<T, T> where T : IEntity
-{
+public class UpdateAndGet<T> : UpdateAndGet<T, T> where T : IEntity {
     internal UpdateAndGet(IClientSessionHandle? session,
                           Dictionary<Type, (object filterDef, bool prepend)>? globalFilters,
                           Action<UpdateBase<T>>? onUpdateAction)
@@ -28,9 +27,10 @@ public class UpdateAndGet<T> : UpdateAndGet<T, T> where T : IEntity
 /// </summary>
 /// <typeparam name="T">Any class that implements IEntity</typeparam>
 /// <typeparam name="TProjection">The type to project to</typeparam>
-public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
-{
-    private protected readonly FindOneAndUpdateOptions<T, TProjection> Options = new() { ReturnDocument = ReturnDocument.After };
+public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity {
+    private protected readonly FindOneAndUpdateOptions<T, TProjection> Options =
+        new() { ReturnDocument = ReturnDocument.After };
+
     readonly List<PipelineStageDefinition<T, TProjection>> _stages = [];
     FilterDefinition<T> _filter = Builders<T>.Filter.Empty;
     readonly IClientSessionHandle? _session;
@@ -40,8 +40,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
 
     internal UpdateAndGet(IClientSessionHandle? session,
                           Dictionary<Type, (object filterDef, bool prepend)>? globalFilters,
-                          Action<UpdateBase<T>>? onUpdateAction)
-    {
+                          Action<UpdateBase<T>>? onUpdateAction) {
         _session = session;
         _globalFilters = globalFilters;
         _onUpdateAction = onUpdateAction;
@@ -51,8 +50,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify an IEntity ID as the matching criteria
     /// </summary>
     /// <param name="ID">A unique IEntity ID</param>
-    public UpdateAndGet<T, TProjection> MatchID(object ID)
-    {
+    public UpdateAndGet<T, TProjection> MatchID(object ID) {
         return Match(f => f.Eq(Cache<T>.IdPropName, ID));
     }
 
@@ -60,8 +58,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify the matching criteria with a lambda expression
     /// </summary>
     /// <param name="expression">x => x.Property == Value</param>
-    public UpdateAndGet<T, TProjection> Match(Expression<Func<T, bool>> expression)
-    {
+    public UpdateAndGet<T, TProjection> Match(Expression<Func<T, bool>> expression) {
         return Match(f => f.Where(expression));
     }
 
@@ -69,8 +66,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify the matching criteria with a filter expression
     /// </summary>
     /// <param name="filter">f => f.Eq(x => x.Prop, Value) &amp; f.Gt(x => x.Prop, Value)</param>
-    public UpdateAndGet<T, TProjection> Match(Func<FilterDefinitionBuilder<T>, FilterDefinition<T>> filter)
-    {
+    public UpdateAndGet<T, TProjection> Match(Func<FilterDefinitionBuilder<T>, FilterDefinition<T>> filter) {
         _filter &= filter(Builders<T>.Filter);
 
         return this;
@@ -80,8 +76,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify the matching criteria with a filter definition
     /// </summary>
     /// <param name="filterDefinition">A filter definition</param>
-    public UpdateAndGet<T, TProjection> Match(FilterDefinition<T> filterDefinition)
-    {
+    public UpdateAndGet<T, TProjection> Match(FilterDefinition<T> filterDefinition) {
         _filter &= filterDefinition;
 
         return this;
@@ -91,8 +86,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify the matching criteria with a template
     /// </summary>
     /// <param name="template">A Template with a find query</param>
-    public UpdateAndGet<T, TProjection> Match(Template template)
-    {
+    public UpdateAndGet<T, TProjection> Match(Template template) {
         _filter &= template.RenderToString();
 
         return this;
@@ -111,19 +105,15 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
                                               string searchTerm,
                                               bool caseSensitive = false,
                                               bool diacriticSensitive = false,
-                                              string? language = null)
-    {
-        if (searchType != Search.Fuzzy)
-        {
-            return Match(
-                f => f.Text(
-                    searchTerm,
-                    new TextSearchOptions
-                    {
-                        CaseSensitive = caseSensitive,
-                        DiacriticSensitive = diacriticSensitive,
-                        Language = language
-                    }));
+                                              string? language = null) {
+        if (searchType != Search.Fuzzy) {
+            return Match(f => f.Text(
+                searchTerm,
+                new TextSearchOptions {
+                    CaseSensitive = caseSensitive,
+                    DiacriticSensitive = diacriticSensitive,
+                    Language = language
+                }));
         }
 
         searchTerm = searchTerm.ToDoubleMetaphoneHash();
@@ -131,15 +121,13 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
         diacriticSensitive = false;
         language = null;
 
-        return Match(
-            f => f.Text(
-                searchTerm,
-                new TextSearchOptions
-                {
-                    CaseSensitive = caseSensitive,
-                    DiacriticSensitive = diacriticSensitive,
-                    Language = language
-                }));
+        return Match(f => f.Text(
+            searchTerm,
+            new TextSearchOptions {
+                CaseSensitive = caseSensitive,
+                DiacriticSensitive = diacriticSensitive,
+                Language = language
+            }));
     }
 
     /// <summary>
@@ -154,8 +142,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     public UpdateAndGet<T, TProjection> Match(Expression<Func<T, object?>> coordinatesProperty,
                                               Coordinates2D nearCoordinates,
                                               double? maxDistance = null,
-                                              double? minDistance = null)
-    {
+                                              double? minDistance = null) {
         return Match(f => f.Near(coordinatesProperty, nearCoordinates.ToGeoJsonPoint(), maxDistance, minDistance));
     }
 
@@ -163,8 +150,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify the matching criteria with a JSON string
     /// </summary>
     /// <param name="jsonString">{ Title : 'The Power Of Now' }</param>
-    public UpdateAndGet<T, TProjection> MatchString(string jsonString)
-    {
+    public UpdateAndGet<T, TProjection> MatchString(string jsonString) {
         _filter &= jsonString;
 
         return this;
@@ -174,8 +160,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify the matching criteria with an aggregation expression (i.e. $expr)
     /// </summary>
     /// <param name="expression">{ $gt: ['$Property1', '$Property2'] }</param>
-    public UpdateAndGet<T, TProjection> MatchExpression(string expression)
-    {
+    public UpdateAndGet<T, TProjection> MatchExpression(string expression) {
         _filter &= "{$expr:" + expression + "}";
 
         return this;
@@ -185,8 +170,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify the matching criteria with a Template
     /// </summary>
     /// <param name="template">A Template object</param>
-    public UpdateAndGet<T, TProjection> MatchExpression(Template template)
-    {
+    public UpdateAndGet<T, TProjection> MatchExpression(Template template) {
         _filter &= "{$expr:" + template.RenderToString() + "}";
 
         return this;
@@ -197,8 +181,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// </summary>
     /// <param name="property">x => x.Property</param>
     /// <param name="value">The value to set on the property</param>
-    public UpdateAndGet<T, TProjection> Modify<TProp>(Expression<Func<T, TProp>> property, TProp value)
-    {
+    public UpdateAndGet<T, TProjection> Modify<TProp>(Expression<Func<T, TProp>> property, TProp value) {
         AddModification(property, value);
 
         return this;
@@ -208,8 +191,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify the update definition builder operation to modify the Entities (use multiple times if needed)
     /// </summary>
     /// <param name="operation">b => b.Inc(x => x.PropName, Value)</param>
-    public UpdateAndGet<T, TProjection> Modify(Func<UpdateDefinitionBuilder<T>, UpdateDefinition<T>> operation)
-    {
+    public UpdateAndGet<T, TProjection> Modify(Func<UpdateDefinitionBuilder<T>, UpdateDefinition<T>> operation) {
         AddModification(operation);
 
         return this;
@@ -219,8 +201,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify an update (json string) to modify the Entities (use multiple times if needed)
     /// </summary>
     /// <param name="update">{ $set: { 'RootProp.$[x].SubProp' : 321 } }</param>
-    public UpdateAndGet<T, TProjection> Modify(string update)
-    {
+    public UpdateAndGet<T, TProjection> Modify(string update) {
         AddModification(update);
 
         return this;
@@ -230,8 +211,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify an update with a Template to modify the Entities (use multiple times if needed)
     /// </summary>
     /// <param name="template">A Template with a single update</param>
-    public UpdateAndGet<T, TProjection> Modify(Template template)
-    {
+    public UpdateAndGet<T, TProjection> Modify(Template template) {
         AddModification(template.RenderToString());
 
         return this;
@@ -241,8 +221,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Modify ALL properties with the values from the supplied entity instance.
     /// </summary>
     /// <param name="entity">The entity instance to read the property values from</param>
-    public UpdateAndGet<T, TProjection> ModifyWith(T entity)
-    {
+    public UpdateAndGet<T, TProjection> ModifyWith(T entity) {
         if (Cache<T>.HasModifiedOn)
             ((IModifiedOn)entity).ModifiedOn = DateTime.UtcNow;
         Defs.AddRange(Logic.BuildUpdateDefs(entity));
@@ -255,8 +234,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// </summary>
     /// <param name="members">A new expression with the properties to include. Ex: <c>x => new { x.PropOne, x.PropTwo }</c></param>
     /// <param name="entity">The entity instance to read the corresponding values from</param>
-    public UpdateAndGet<T, TProjection> ModifyOnly(Expression<Func<T, object?>> members, T entity)
-    {
+    public UpdateAndGet<T, TProjection> ModifyOnly(Expression<Func<T, object?>> members, T entity) {
         if (Cache<T>.HasModifiedOn)
             ((IModifiedOn)entity).ModifiedOn = DateTime.UtcNow;
         Defs.AddRange(Logic.BuildUpdateDefs(entity, members));
@@ -269,8 +247,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// </summary>
     /// <param name="members">Supply a new expression with the properties to exclude. Ex: <c>x => new { x.Prop1, x.Prop2 }</c></param>
     /// <param name="entity">The entity instance to read the corresponding values from</param>
-    public UpdateAndGet<T, TProjection> ModifyExcept(Expression<Func<T, object?>> members, T entity)
-    {
+    public UpdateAndGet<T, TProjection> ModifyExcept(Expression<Func<T, object?>> members, T entity) {
         if (Cache<T>.HasModifiedOn)
             ((IModifiedOn)entity).ModifiedOn = DateTime.UtcNow;
         Defs.AddRange(Logic.BuildUpdateDefs(entity, members, excludeMode: true));
@@ -283,8 +260,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// <para>NOTE: pipeline updates and regular updates cannot be used together.</para>
     /// </summary>
     /// <param name="template">A Template object containing multiple pipeline stages</param>
-    public UpdateAndGet<T, TProjection> WithPipeline(Template template)
-    {
+    public UpdateAndGet<T, TProjection> WithPipeline(Template template) {
         foreach (var stage in template.ToStages())
             _stages.Add(stage);
 
@@ -296,8 +272,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// <para>NOTE: pipeline updates and regular updates cannot be used together.</para>
     /// </summary>
     /// <param name="stage">{ $set: { FullName: { $concat: ['$Name', ' ', '$Surname'] } } }</param>
-    public UpdateAndGet<T, TProjection> WithPipelineStage(string stage)
-    {
+    public UpdateAndGet<T, TProjection> WithPipelineStage(string stage) {
         _stages.Add(stage);
 
         return this;
@@ -315,8 +290,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify an array filter to target nested entities for updates (use multiple times if needed).
     /// </summary>
     /// <param name="filter">{ 'x.SubProp': { $gte: 123 } }</param>
-    public UpdateAndGet<T, TProjection> WithArrayFilter(string filter)
-    {
+    public UpdateAndGet<T, TProjection> WithArrayFilter(string filter) {
         ArrayFilterDefinition<T> def = filter;
 
         Options.ArrayFilters =
@@ -331,8 +305,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify a single array filter using a Template to target nested entities for updates
     /// </summary>
     /// <param name="template"></param>
-    public UpdateAndGet<T, TProjection> WithArrayFilter(Template template)
-    {
+    public UpdateAndGet<T, TProjection> WithArrayFilter(Template template) {
         WithArrayFilter(template.RenderToString());
 
         return this;
@@ -342,8 +315,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify multiple array filters with a Template to target nested entities for updates.
     /// </summary>
     /// <param name="template">The template with an array [...] of filters</param>
-    public UpdateAndGet<T, TProjection> WithArrayFilters(Template template)
-    {
+    public UpdateAndGet<T, TProjection> WithArrayFilters(Template template) {
         var defs = template.ToArrayFilters<T>();
 
         Options.ArrayFilters =
@@ -359,8 +331,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// <para>TIP: Setting options is not required</para>
     /// </summary>
     /// <param name="option">x => x.OptionName = OptionValue</param>
-    public UpdateAndGet<T, TProjection> Option(Action<FindOneAndUpdateOptions<T, TProjection>> option)
-    {
+    public UpdateAndGet<T, TProjection> Option(Action<FindOneAndUpdateOptions<T, TProjection>> option) {
         option(Options);
 
         return this;
@@ -370,8 +341,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify how to project the results using a lambda expression
     /// </summary>
     /// <param name="expression">x => new Test { PropName = x.Prop }</param>
-    public UpdateAndGet<T, TProjection> Project(Expression<Func<T, TProjection>> expression)
-    {
+    public UpdateAndGet<T, TProjection> Project(Expression<Func<T, TProjection>> expression) {
         return Project(p => p.Expression(expression));
     }
 
@@ -379,8 +349,8 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify how to project the results using a projection expression
     /// </summary>
     /// <param name="projection">p => p.Include("Prop1").Exclude("Prop2")</param>
-    public UpdateAndGet<T, TProjection> Project(Func<ProjectionDefinitionBuilder<T>, ProjectionDefinition<T, TProjection>> projection)
-    {
+    public UpdateAndGet<T, TProjection> Project(
+        Func<ProjectionDefinitionBuilder<T>, ProjectionDefinition<T, TProjection>> projection) {
         Options.Projection = projection(Builders<T>.Projection);
 
         return this;
@@ -390,10 +360,10 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Specify to automatically include all properties marked with [BsonRequired] attribute on the entity in the final projection.
     /// <para>HINT: this method should only be called after the .Project() method.</para>
     /// </summary>
-    public UpdateAndGet<T, TProjection> IncludeRequiredProps()
-    {
+    public UpdateAndGet<T, TProjection> IncludeRequiredProps() {
         if (typeof(T) != typeof(TProjection))
-            throw new InvalidOperationException("IncludeRequiredProps() cannot be used when projecting to a different type.");
+            throw new InvalidOperationException(
+                "IncludeRequiredProps() cannot be used when projecting to a different type.");
 
         Options.Projection = Cache<T>.CombineWithRequiredProps(Options.Projection);
 
@@ -403,8 +373,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// <summary>
     /// Specify that this operation should ignore any global filters
     /// </summary>
-    public UpdateAndGet<T, TProjection> IgnoreGlobalFilters()
-    {
+    public UpdateAndGet<T, TProjection> IgnoreGlobalFilters() {
         _ignoreGlobalFilters = true;
 
         return this;
@@ -414,8 +383,7 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
     /// Run the update command in MongoDB and retrieve the first document modified
     /// </summary>
     /// <param name="cancellation">An optional cancellation token</param>
-    public async Task<TProjection?> ExecuteAsync(CancellationToken cancellation = default)
-    {
+    public async Task<TProjection?> ExecuteAsync(CancellationToken cancellation = default) {
         var mergedFilter = Logic.MergeWithGlobalFilter(_ignoreGlobalFilters, _globalFilters, _filter);
 
         if (mergedFilter == Builders<T>.Filter.Empty)
@@ -429,15 +397,15 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
             Modify(b => b.CurrentDate(Cache<T>.ModifiedOnPropName));
         _onUpdateAction?.Invoke(this);
 
-        return await UpdateAndGetAsync(mergedFilter, Builders<T>.Update.Combine(Defs), Options, _session, cancellation).ConfigureAwait(false);
+        return await UpdateAndGetAsync(mergedFilter, Builders<T>.Update.Combine(Defs), Options, _session, cancellation)
+                   .ConfigureAwait(false);
     }
 
     /// <summary>
     /// Run the update command with pipeline stages and retrieve the first document modified
     /// </summary>
     /// <param name="cancellation">An optional cancellation token</param>
-    public async Task<TProjection?> ExecutePipelineAsync(CancellationToken cancellation = default)
-    {
+    public async Task<TProjection?> ExecutePipelineAsync(CancellationToken cancellation = default) {
         var mergedFilter = Logic.MergeWithGlobalFilter(_ignoreGlobalFilters, _globalFilters, _filter);
 
         if (mergedFilter == Builders<T>.Filter.Empty)
@@ -450,20 +418,26 @@ public class UpdateAndGet<T, TProjection> : UpdateBase<T> where T : IEntity
         if (ShouldSetModDate())
             WithPipelineStage($"{{ $set: {{ '{Cache<T>.ModifiedOnPropName}': new Date() }} }}");
 
-        return await UpdateAndGetAsync(mergedFilter, Builders<T>.Update.Pipeline(_stages.ToArray()), Options, _session, cancellation);
+        return await UpdateAndGetAsync(
+                   mergedFilter,
+                   Builders<T>.Update.Pipeline(_stages.ToArray()),
+                   Options,
+                   _session,
+                   cancellation);
     }
 
-    bool ShouldSetModDate()
-    {
+    bool ShouldSetModDate() {
         //only set mod date by library if user hasn't done anything with the ModifiedOn property
 
         return
             Cache<T>.HasModifiedOn &&
-            !Defs.Any(
-                d => d
-                     .Render(new(BsonSerializer.SerializerRegistry.GetSerializer<T>(), BsonSerializer.SerializerRegistry))
-                     .ToString()
-                     .Contains($"\"{Cache<T>.ModifiedOnPropName}\""));
+            !Defs.Any(d => d
+                           .Render(
+                               new(
+                                   BsonSerializer.SerializerRegistry.GetSerializer<T>(),
+                                   BsonSerializer.SerializerRegistry))
+                           .ToString()
+                           .Contains($"\"{Cache<T>.ModifiedOnPropName}\""));
     }
 
     static Task<TProjection> UpdateAndGetAsync(FilterDefinition<T> filter,

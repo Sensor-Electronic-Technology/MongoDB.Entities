@@ -1,6 +1,4 @@
-﻿using MongoDB.Bson;
-
-namespace MongoDB.Entities;
+﻿namespace MongoDB.Entities;
 
 /// <summary>
 /// The contract for Entity classes
@@ -21,9 +19,4 @@ public interface IEntity
     /// If <c>'false'</c> is returned, it is assumed that ID generation is not required and the entity already has a non-default ID value.
     /// </summary>
     bool HasDefaultID();
-}
-
-public interface IDocumentEntity:IEntity {
-    public BsonDocument? AdditionalData { get; set; }
-    public DocumentVersion Version { get; set; }
 }
