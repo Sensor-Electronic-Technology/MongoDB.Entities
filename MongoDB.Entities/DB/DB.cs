@@ -196,10 +196,12 @@ public static partial class DB {
                 case ChangeStreamOperationType.Delete: {
                     var typeConfig = change.FullDocumentBeforeChange;
                     var type = Type.GetType(typeConfig.TypeName);
+
                     if (type != null) {
                         AddUpdateTypeConfiguration(type, null);
                         Log(LogLevel.Information, "Type {TypeName} is deleted from TypeConfigurationMap", args: type);
                     }
+
                     break;
                 }
 
@@ -292,6 +294,13 @@ public static partial class DB {
     /// <typeparam name="TEntity">Any class that implements DocumentEntity</typeparam>
     public static TypeConfiguration? TypeConfiguration<TEntity>() where TEntity : IDocumentEntity
         => TypeMap.GetTypeConfiguration(typeof(TEntity));
+    
+    /// <summary>
+    /// Gets the TypeConfiguration for the give type of DocumentEntity
+    /// </summary>
+    /// <typeparam name="TEntity">Any class that implements DocumentEntity</typeparam>
+    public static EmbeddedTypeConfiguration? EmbeddedTypeConfiguration<TEntity>() where TEntity : IEmbeddedEntity
+        => TypeMap.GetEmbeddedTypeConfiguration(typeof(TEntity));
 
     /// <summary>
     /// Gets the TypeConfiguration for the given Type of DocumentEntity
@@ -299,6 +308,13 @@ public static partial class DB {
     /// <param name="type">Type of type DocumentEntity to get the TypeConfiguration for</param>
     public static TypeConfiguration? TypeConfiguration(Type type)
         => TypeMap.GetTypeConfiguration(type);
+    
+    /// <summary>
+    /// Gets the EmbeddedTypeConfiguration for the given Type of IEmbeddedDocument
+    /// </summary>
+    /// <param name="type">Type of type DocumentEntity to get the TypeConfiguration for</param>
+    public static TypeConfiguration? EmbeddedTypeConfiguration(Type type)
+        => TypeMap.GetEmbeddedTypeConfiguration(type);
 
     /// <summary>
     /// Updates the TypeConfiguration for the give type of DocumentEntity
@@ -307,6 +323,14 @@ public static partial class DB {
     /// <param name="typeConfig">TypeConfiguration of the given type</param>
     public static void AddUpdateTypeConfiguration(Type type, TypeConfiguration? typeConfig)
         => TypeMap.AddUpdateTypeConfiguration(type, typeConfig);
+    
+    /// <summary>
+    /// Gets the EmbeddedTypeConfiguration for the given Type of IEmbeddedDocument
+    /// </summary>
+    /// <param name="type">Type of type IEmbeddedDocument to get the EmbeddedTypeConfiguration for</param>
+    /// <param name="typeConfig">EmbeddedTypeConfiguration to map to type</param>
+    public static void AddUpdateEmbeddedTypeConfiguration(Type type, EmbeddedTypeConfiguration? typeConfig)
+        => TypeMap.AddUpdateEmbeddedTypeConfiguration(type, typeConfig);
 
     /// <summary>
     /// Switches the default database at runtime

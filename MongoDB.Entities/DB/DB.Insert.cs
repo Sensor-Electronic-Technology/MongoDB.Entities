@@ -19,7 +19,7 @@ public static partial class DB {
                                             IClientSessionHandle? session = null,
                                             CancellationToken cancellation = default) where T : IEntity {
         if (entity is IDocumentEntity ent) {
-            await ApplyMigrations(ent, cancellation);
+            await ApplyMigrations(ent, cancellation:cancellation);
         }
         PrepAndCheckIfInsert(entity);
         if (session == null) {
@@ -42,7 +42,7 @@ public static partial class DB {
         var models = new List<WriteModel<T>>(entities.Count());
         foreach (var entity in entities) {
             if (entity is IDocumentEntity ent) {
-                await ApplyMigrations(ent, cancellation);
+                await ApplyMigrations(ent, cancellation:cancellation);
             }
             PrepAndCheckIfInsert(entity);
             models.Add(new InsertOneModel<T>(entity));

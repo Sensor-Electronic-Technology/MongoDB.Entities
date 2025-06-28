@@ -14,97 +14,237 @@ using NCalcExtensions;
 namespace MongoDB.Entities;
 
 public static partial class DB {
+    public static async Task ApplyMigrations() {
+        var collection = Collection<DocumentMigration>();
+        var migrations =
+            await collection.Find(e => !e.IsMigrated).SortByDescending(e => e.MigrationNumber).ToListAsync();
+
+        Log(LogLevel.Information, "Applying migrations, Count: {Count}", migrations.Count);
+        foreach (var migration in migrations) {
+            if (migration is EmbeddedMigration embMigration) {
+                await ApplyMigrationsEmbedded(embMigration);
+            } else {
+                await ApplyDocumentMigrations(migration);
+            }
+        }
+    }
+
     /// <summary>
     /// Migrate all migrations that haven't been migrated yet.
     /// Designed to be run by a external service or at startup
     /// </summary>
-    public static async Task ApplyMigrations() {
-        var migrateCollection = Collection<DocumentMigration>();
-        var migrations = await migrateCollection.Find(e => !e.IsMigrated)
-                                                .SortByDescending(e => e.MigrationNumber)
-                                                .ToListAsync();
-        Log(LogLevel.Information, "Applying migrations, Count: {Count}", migrations.Count);
+    public static async Task ApplyDocumentMigrations(DocumentMigration migration) {
+        if (migration.TypeConfiguration == null) {
+            Log(LogLevel.Warning, "TypeConfiguration is for migration {Migration} is null", migration.ID);
 
-        foreach (var migration in migrations) {
-            if (migration.TypeConfiguration == null) {
-                Log(LogLevel.Warning, "TypeConfiguration is for migration {Migration} is null", migration.ID);
+            return;
+        }
+        var typeConfig = await migration.TypeConfiguration.ToEntityAsync();
+        Log(
+            LogLevel.Information,
+            "Applying migration: ID: {MigrationId} Type:{Type} Number:{Number}",
+            migration.ID,
+            typeConfig.TypeName,
+            migration.MigrationNumber);
+        var collection = Collection(typeConfig.DatabaseName, typeConfig.CollectionName);
+        var cursor = await collection.FindAsync(
+                         new BsonDocument(),
+                         new FindOptions<BsonDocument> { BatchSize = 100 });
+        List<UpdateManyModel<BsonDocument>> updates = [];
 
-                return;
-            }
-            var typeConfig = await migration.TypeConfiguration.ToEntityAsync();
-            Log(
-                LogLevel.Information,
-                "Applying migration: ID: {MigrationId} Type:{Type} Number:{Number}",
-                migration.ID,
-                typeConfig.TypeName,
-                migration.MigrationNumber);
-            var collection = Collection(typeConfig.DatabaseName, typeConfig.CollectionName);
-            var cursor = await collection.FindAsync(
-                             new BsonDocument(),
-                             new FindOptions<BsonDocument> { BatchSize = 100 });
-            List<UpdateManyModel<BsonDocument>> updates = [];
+        while (await cursor.MoveNextAsync()) {
+            foreach (var entity in cursor.Current) {
+                //Check if AdditionalData is null, create new if null
+                var doc = entity.GetElement("AdditionalData").Value.ToBsonDocument();
 
-            while (await cursor.MoveNextAsync()) {
-                foreach (var entity in cursor.Current) {
-                    //Check if AdditionalData is null, create new if null
-                    var doc = entity.GetElement("AdditionalData").Value.ToBsonDocument();
+                if (doc.Contains("_csharpnull")) {
+                    doc = [];
+                }
 
-                    if (doc.Contains("_csharpnull")) {
-                        doc = [];
-                    }
-
-                    foreach (var op in migration.UpOperations) {
-                        if (op is AddFieldOperation addField) {
-                            if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == addField.Field.FieldName) ==
-                                null) {
-                                await AddField(typeConfig, addField.Field, doc, entity);
-                            }
-                        } else if (op is DropFieldOperation dropField) {
-                            if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == dropField.Field.FieldName) !=
-                                null) {
-                                doc.Remove(dropField.Field.FieldName);
-                            }
-                        } else if (op is AlterFieldOperation alterField) {
-                            if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == alterField.OldField.FieldName) !=
-                                null) {
-                                doc.Remove(alterField.OldField.FieldName);
-                                await AddField(typeConfig, alterField.Field, doc, entity);
-                            } else {
-                                await AddField(typeConfig, alterField.Field, doc, entity);
-                            }
+                foreach (var op in migration.UpOperations) {
+                    if (op is AddFieldOperation addField) {
+                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == addField.Field.FieldName) ==
+                            null) {
+                            await AddField(typeConfig, addField.Field, doc, entity);
+                        }
+                    } else if (op is DropFieldOperation dropField) {
+                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == dropField.Field.FieldName) !=
+                            null) {
+                            doc.Remove(dropField.Field.FieldName);
+                        }
+                    } else if (op is AlterFieldOperation alterField) {
+                        if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == alterField.OldField.FieldName) !=
+                            null) {
+                            doc.Remove(alterField.OldField.FieldName);
+                            await AddField(typeConfig, alterField.Field, doc, entity);
+                        } else {
+                            await AddField(typeConfig, alterField.Field, doc, entity);
                         }
                     }
-                    var filter = Builders<BsonDocument>.Filter.Eq("_id", entity["_id"]);
-                    var update = Builders<BsonDocument>.Update.Set("AdditionalData", doc)
-                                                       .Set("DocumentVersion", migration.Version);
-                    updates.Add(new(filter, update));
                 }
+                var filter = Builders<BsonDocument>.Filter.Eq("_id", entity["_id"]);
+                var update = Builders<BsonDocument>.Update.Set("AdditionalData", doc)
+                                                   .Set("DocumentVersion", migration.Version);
+                updates.Add(new(filter, update));
             }
-
-            foreach (var op in migration.UpOperations) {
-                if (op is AddFieldOperation addField) {
-                    if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == addField.Field.FieldName) == null) {
-                        typeConfig.Fields.Add(addField.Field);
-                    }
-                } else if (op is DropFieldOperation dropField) {
-                    if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == dropField.Field.FieldName) != null) {
-                        typeConfig.Fields.Remove(dropField.Field);
-                    }
-                } else if (op is AlterFieldOperation alterField) {
-                    if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == alterField.OldField.FieldName) != null) {
-                        typeConfig.Fields.Remove(alterField.OldField);
-                        typeConfig.Fields.Add(alterField.Field);
-                    }
-                }
-            }
-            typeConfig.DocumentVersion = migration.Version;
-            typeConfig.UpdateAvailableProperties();
-            await typeConfig.SaveAsync();
-            migration.IsMigrated = true;
-            await migration.SaveAsync();
-            await collection.BulkWriteAsync(updates);
-            Log(LogLevel.Information, "Migration completed");
         }
+
+        foreach (var op in migration.UpOperations) {
+            if (op is AddFieldOperation addField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == addField.Field.FieldName) == null) {
+                    typeConfig.Fields.Add(addField.Field);
+                }
+            } else if (op is DropFieldOperation dropField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == dropField.Field.FieldName) != null) {
+                    typeConfig.Fields.Remove(dropField.Field);
+                }
+            } else if (op is AlterFieldOperation alterField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == alterField.OldField.FieldName) != null) {
+                    typeConfig.Fields.Remove(alterField.OldField);
+                    typeConfig.Fields.Add(alterField.Field);
+                }
+            }
+        }
+        typeConfig.DocumentVersion = migration.Version;
+        typeConfig.UpdateAvailableProperties();
+        await typeConfig.SaveAsync();
+        migration.IsMigrated = true;
+        await migration.SaveAsync();
+        await collection.BulkWriteAsync(updates);
+        Log(LogLevel.Information, "Migration completed");
+    }
+
+    /// <summary>
+    /// Migrate all migrations that haven't been migrated yet.
+    /// Designed to be run by a external service or at startup
+    /// </summary>
+    public static async Task ApplyMigrationsEmbedded(EmbeddedMigration migration) {
+        if (migration.EmbeddedTypeConfiguration == null) {
+            Log(LogLevel.Warning, "EmbeddedTypeConfiguration is for migration {Migration} is null", migration.ID);
+
+            return;
+        }
+        var typeConfig = await migration.EmbeddedTypeConfiguration.ToEntityAsync();
+        Log(
+            LogLevel.Information,
+            "Applying migration: ID: {MigrationId} Type:{Type} Number:{Number}",
+            migration.ID,
+            typeConfig.TypeName,
+            migration.MigrationNumber);
+        var collection = Collection(typeConfig.DatabaseName, typeConfig.CollectionName);
+        var cursor = await collection.FindAsync(
+                         new BsonDocument(),
+                         new FindOptions<BsonDocument> { BatchSize = 100 });
+        List<UpdateManyModel<BsonDocument>> updates = [];
+
+        while (await cursor.MoveNextAsync()) {
+            foreach (var entity in cursor.Current) {
+                bool updated = false;
+                foreach (var propertyName in typeConfig.PropertyNames) {
+                    if (!entity.Contains(propertyName)) {
+                        Log(LogLevel.Warning, "Property {Property} is missing from Entity: {EntityId}", propertyName,entity["_id"]);
+                        continue;
+                    }
+                    if (typeConfig.IsArray) {
+                        var arr = entity.GetElement(propertyName).Value.AsBsonArray;
+                        if (arr.Count == 0 || arr.Contains("_csharpnull")) {
+                            Log(LogLevel.Warning, "Array {Array} is null or empty", propertyName);
+                            continue;
+                        }
+                        foreach (var bVal in arr) {
+                            await ApplyMigrationOperations(bVal.AsBsonDocument, migration, typeConfig);
+                        }
+                        entity[propertyName] = arr;
+                        updated = true;
+                    } else {
+                        var doc = entity.GetElement(propertyName).Value.AsBsonDocument;
+                        if (doc == null || doc.Contains("_csharpnull")) {
+                            Log(LogLevel.Warning, "Embedded object {Doc} is null or empty", propertyName);
+                            continue;
+                        }
+                        await ApplyMigrationOperations(doc, migration, typeConfig);
+                        entity[propertyName] = doc;
+                        updated = true;
+                    }
+                }
+
+                if (!updated) {
+                    continue;
+                }
+                var filter = Builders<BsonDocument>.Filter.Eq("_id", entity["_id"]);
+                var update = Builders<BsonDocument>.Update;
+                List<UpdateDefinition<BsonDocument>> updatesList = [];
+                foreach (var prop in typeConfig.PropertyNames) {
+                    updatesList.Add(update.Set(e => e[prop], entity[prop]));
+                }
+                updates.Add(new(filter, update.Combine(updatesList)));
+            }
+        }
+
+        foreach (var op in migration.UpOperations) {
+            if (op is AddFieldOperation addField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == addField.Field.FieldName) == null) {
+                    typeConfig.Fields.Add(addField.Field);
+                }
+            } else if (op is DropFieldOperation dropField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == dropField.Field.FieldName) != null) {
+                    typeConfig.Fields.Remove(dropField.Field);
+                }
+            } else if (op is AlterFieldOperation alterField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == alterField.OldField.FieldName) != null) {
+                    typeConfig.Fields.Remove(alterField.OldField);
+                    typeConfig.Fields.Add(alterField.Field);
+                }
+            }
+        }
+        typeConfig.DocumentVersion = migration.Version;
+        typeConfig.UpdateAvailableProperties();
+        await typeConfig.SaveAsync();
+        migration.IsMigrated = true;
+        await migration.SaveAsync();
+        await collection.BulkWriteAsync(updates);
+        Log(LogLevel.Information, "Migration completed");
+    }
+
+    static async Task ApplyMigrationOperations(BsonDocument embeddedDoc,
+                                               EmbeddedMigration migration,
+                                               EmbeddedTypeConfiguration typeConfig) {
+        var addDataDoc = embeddedDoc.GetElement("AdditionalData").Value.ToBsonDocument();
+
+        if (addDataDoc.Contains("_csharpnull")) {
+            addDataDoc = [];
+        }
+
+        foreach (var op in migration.UpOperations) {
+            if (op is AddFieldOperation addField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == addField.Field.FieldName) ==
+                    null) {
+                    await AddField(typeConfig, addField.Field, addDataDoc, embeddedDoc);
+                }
+            } else if (op is DropFieldOperation dropField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == dropField.Field.FieldName) !=
+                    null) {
+                    addDataDoc.Remove(dropField.Field.FieldName);
+                }
+            } else if (op is AlterFieldOperation alterField) {
+                if (typeConfig.Fields.FirstOrDefault(e => e.FieldName == alterField.OldField.FieldName) !=
+                    null) {
+                    addDataDoc.Remove(alterField.OldField.FieldName);
+                    await AddField(typeConfig, alterField.Field, addDataDoc, embeddedDoc);
+                } else {
+                    await AddField(typeConfig, alterField.Field, addDataDoc, embeddedDoc);
+                }
+            }
+        }
+
+        //Console.WriteLine(addDataDoc.ToJson());
+        embeddedDoc["AdditionalData"] = addDataDoc;
+
+        //Console.WriteLine(addDataDoc.ToJson());
+        /*var filter = Builders<BsonDocument>.Filter.Eq("_id", embeddedEntity["_id"]);
+        var update = Builders<BsonDocument>.Update.Set("AdditionalData", addDataDoc)
+                                           .Set("DocumentVersion", migration.Version);
+        updates.Add(new(filter, update));*/
     }
 
     /// <summary>
@@ -207,12 +347,14 @@ public static partial class DB {
     }
 
     /// <summary>
-    /// Migrates a single entity of type DocumentEntity
+    /// Migrates a single entity of type IDocumentEntity
     /// </summary>
     /// <param name="entity">Entity to apply migration to</param>
     /// <param name="cancellation">Optional Cancellation Token</param>
     /// <typeparam name="TEntity">Restricted to type DocumentMigration</typeparam>
-    public static async Task ApplyMigrations<TEntity>(TEntity entity, CancellationToken cancellation = default)
+    public static async Task ApplyMigrations<TEntity>(TEntity entity,
+                                                      Dictionary<string, object>? additionalData = null,
+                                                      CancellationToken cancellation = default)
         where TEntity : IDocumentEntity {
         var typeConfig = TypeConfiguration<TEntity>() ??
                          await Find<TypeConfiguration>()
@@ -222,7 +364,7 @@ public static partial class DB {
         if (typeConfig == null) {
             return;
         }
-
+        
         if (!typeConfig.Migrations.Any()) {
             return;
         }
@@ -247,6 +389,14 @@ public static partial class DB {
                 } else if (op is AlterFieldOperation alterField) {
                     doc.Remove(alterField.OldField.FieldName);
                     await AddField(typeConfig, alterField.Field, doc, entityDoc);
+                }
+            }
+        }
+
+        if (additionalData != null) {
+            foreach (var fieldItem in additionalData) {
+                if (doc.Contains(fieldItem.Key)) {
+                    doc[fieldItem.Key] = BsonValue.Create(fieldItem.Value);
                 }
             }
         }
@@ -303,10 +453,9 @@ public static partial class DB {
         }
     }
 
-    internal static async Task<ExtendedExpression> ProcessCalculationField(
-        CalculatedField cField,
-        BsonDocument doc,
-        BsonDocument entity) {
+    internal static async Task<ExtendedExpression> ProcessCalculationField(CalculatedField cField,
+                                                                           BsonDocument doc,
+                                                                           BsonDocument entity) {
         var expression = new ExtendedExpression(cField.Expression);
 
         foreach (var variable in cField.Variables) {
@@ -315,6 +464,7 @@ public static partial class DB {
             } else if (variable is PropertyVariable pVar) {
                 if (pVar is EmbeddedPropertyVariable embeddedVar) {
                     var emDoc = entity[embeddedVar.Property].AsBsonDocument;
+
                     for (int i = 0; i < embeddedVar.EmbeddedObjectProperties.Count; i++) {
                         emDoc = emDoc[embeddedVar.EmbeddedObjectProperties[i]].AsBsonDocument;
                     }

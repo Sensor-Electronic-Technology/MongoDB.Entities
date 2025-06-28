@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace MongoDB.Entities;
 
-[Collection("_document_migrations_")]
+
+
+[Collection("_document_migrations_"),
+ BsonDiscriminator(RootClass = true), 
+BsonKnownTypes(typeof(EmbeddedMigration))]
 public class DocumentMigration : Entity,IDocumentMigration,ICreatedOn {
     public DateTime CreatedOn { get; set; }
     public DateTime MigratedOn { get; set; }
@@ -42,3 +47,8 @@ public class DocumentMigration : Entity,IDocumentMigration,ICreatedOn {
         });
     }
 }
+
+[Collection("_document_migrations_")]
+public class EmbeddedMigration : DocumentMigration {
+    public One<EmbeddedTypeConfiguration>? EmbeddedTypeConfiguration { get; set; }
+}   

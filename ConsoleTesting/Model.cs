@@ -20,6 +20,11 @@ public class TemplateRun : IDocumentEntity, ICreatedOn, IModifiedOn {
     public DateTime ModifiedOn { get; set; }
 }
 
+public class TestEmbeddedNotArray : IEmbeddedEntity {
+    public string? Name { get; set; }
+    public BsonDocument? AdditionalData { get; set; }
+}
+
 [Collection("epi_runs")]
 public class EpiRun : DocumentEntity,ICreatedOn,IModifiedOn {
     public DateTime TimeStamp { get; set; }
@@ -29,6 +34,7 @@ public class EpiRun : DocumentEntity,ICreatedOn,IModifiedOn {
     public string TechnicianId { get; set; }
     public string RunNumber { get; set; }
     public string PocketNumber { get; set; }
+    public TestEmbeddedNotArray? TestEmbeddedNotArray { get; set; }
     public Many<Monitoring,EpiRun> EpiRunMonitoring { get; set; }
     public One<QuickTest> QuickTest { get; set; }
     public One<XrdData> XrdData { get; set; }
@@ -110,7 +116,6 @@ public class QtMeasurement:IEmbeddedEntity {
     public double Wavelength { get; set; }
     public BsonDocument? AdditionalData { get; set; }
 }
-
 
 public class XrdMeasurement:IEmbeddedEntity {
     public DateTime TimeStamp { get; set; }

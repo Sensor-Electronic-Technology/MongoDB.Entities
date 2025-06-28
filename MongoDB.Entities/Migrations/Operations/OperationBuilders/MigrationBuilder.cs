@@ -55,4 +55,25 @@ public class MigrationBuilder {
         migration.MigrationNumber = ++migrationNumber;
         return migration;
     }
+    
+    public virtual EmbeddedMigration Build(EmbeddedTypeConfiguration typeConfig,int migrationNumber) {
+        EmbeddedMigration migration = new EmbeddedMigration() {
+            MigratedOn = DateTime.MinValue.ToUniversalTime(),
+            IsMigrated = false,
+            MigrationNumber = 0,
+        };
+        migration.Build(this);
+        bool major=migration.UpOperations.OfType<AddFieldOperation>().Any();
+        major= major || migration.UpOperations.OfType<DropFieldOperation>().Any();
+        if (major) {
+            migration.Version=typeConfig.DocumentVersion.IncrementMajor();
+            migration.IsMajorVersion = true;
+        } else {
+            migration.Version=typeConfig.DocumentVersion.Increment();
+            migration.IsMajorVersion=migration.Version.Major>typeConfig.DocumentVersion.Major;
+        }
+        migration.EmbeddedTypeConfiguration = typeConfig.ToReference();
+        migration.MigrationNumber = ++migrationNumber;
+        return migration;
+    }
 }

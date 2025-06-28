@@ -21,10 +21,10 @@ public static partial class DB {
     /// <param name="entity">The instance to persist</param>
     /// <param name="session">An optional session if using within a transaction</param>
     /// <param name="cancellation">And optional cancellation token</param>
-    public static async Task SaveMigrateAsync<T>(T entity, IClientSessionHandle? session = null,
+    public static async Task SaveMigrateAsync<T>(T entity,Dictionary<string,object>? additionalData=null,IClientSessionHandle? session = null,
                                                  CancellationToken cancellation = default) where T : IDocumentEntity {
         var filter = Builders<T>.Filter.Eq(Cache<T>.IdPropName, entity.GetId());
-        await ApplyMigrations(entity, cancellation: cancellation);
+        await ApplyMigrations(entity,additionalData,cancellation: cancellation);
 
         if (PrepAndCheckIfInsert(entity)) {
             if (session == null) {

@@ -7,17 +7,19 @@ using MongoDB.Driver;
 
 namespace MongoDB.Entities;
 
-public static partial class Extensions
-{
+public static partial class Extensions {
     /// <summary>
-    /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
-    /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
+    /// Applies a migration to a entity of type IDocumentEntity.  
     /// </summary>
-    /// <param name="entity"></param>
-    /// <param name="session">An optional session if using within a transaction</param>
+    /// <param name="entity">An entity of type IDocumentEntity</param>
+    /// <param name="additionalData">Optional dictionary data to fill data after migration</param>
     /// <param name="cancellation">An optional cancellation token</param>
-    public static Task SaveAsync<T>(this T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : IEntity
-        => DB.SaveAsync(entity, session, cancellation);
+    public static async Task ApplyMigration<T>(this T entity, Dictionary<string, object>? additionalData = null,CancellationToken cancellation = default)
+        where T : IDocumentEntity {
+        if (entity is IDocumentEntity ent) {
+             await DB.ApplyMigrations(ent, additionalData, cancellation: default);
+        }
+    }
     
     /// <summary>
     /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
@@ -26,8 +28,23 @@ public static partial class Extensions
     /// <param name="entity"></param>
     /// <param name="session">An optional session if using within a transaction</param>
     /// <param name="cancellation">An optional cancellation token</param>
-    public static Task SaveMigrateAsync<T>(this T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : IDocumentEntity
-        => DB.SaveMigrateAsync(entity, session, cancellation);
+    public static Task SaveAsync<T>(this T entity,
+                                    IClientSessionHandle? session = null,
+                                    CancellationToken cancellation = default) where T : IEntity
+        => DB.SaveAsync(entity, session, cancellation);
+
+    /// <summary>
+    /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
+    /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
+    /// </summary>
+    /// <param name="entity"></param>
+    /// <param name="session">An optional session if using within a transaction</param>
+    /// <param name="cancellation">An optional cancellation token</param>
+    public static Task SaveMigrateAsync<T>(this T entity,
+                                           Dictionary<string, object>? additionalData = null,
+                                           IClientSessionHandle? session = null,
+                                           CancellationToken cancellation = default) where T : IDocumentEntity
+        => DB.SaveMigrateAsync(entity, additionalData, session, cancellation);
 
     /// <summary>
     /// Saves a batch of complete entities replacing existing ones or creating new ones if they do not exist.
@@ -172,7 +189,8 @@ public static partial class Extensions
     public static Task<BulkWriteResult<T>> SaveExceptAsync<T>(this IEnumerable<T> entities,
                                                               Expression<Func<T, object?>> members,
                                                               IClientSessionHandle? session = null,
-                                                              CancellationToken cancellation = default) where T : IEntity
+                                                              CancellationToken cancellation = default)
+        where T : IEntity
         => DB.SaveExceptAsync(entities, members, session, cancellation);
 
     /// <summary>
@@ -191,7 +209,8 @@ public static partial class Extensions
     public static Task<BulkWriteResult<T>> SaveExceptAsync<T>(this IEnumerable<T> entities,
                                                               IEnumerable<string> propNames,
                                                               IClientSessionHandle? session = null,
-                                                              CancellationToken cancellation = default) where T : IEntity
+                                                              CancellationToken cancellation = default)
+        where T : IEntity
         => DB.SaveExceptAsync(entities, propNames, session, cancellation);
 
     /// <summary>
@@ -202,7 +221,9 @@ public static partial class Extensions
     /// <param name="entity">The entity to save</param>
     /// <param name="session"></param>
     /// <param name="cancellation">An optional cancellation token</param>
-    public static Task<UpdateResult> SavePreservingAsync<T>(this T entity, IClientSessionHandle? session = null, CancellationToken cancellation = default)
+    public static Task<UpdateResult> SavePreservingAsync<T>(this T entity,
+                                                            IClientSessionHandle? session = null,
+                                                            CancellationToken cancellation = default)
         where T : IEntity
         => DB.SavePreservingAsync(entity, session, cancellation);
 }
