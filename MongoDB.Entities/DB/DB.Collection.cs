@@ -85,7 +85,7 @@ public static partial class DB
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
         //Remake watcher after collection drop
-        if (typeof(T) == typeof(TypeConfiguration)) {
+        if (typeof(T) == typeof(DocumentTypeConfiguration)) {
             Cache<T>.Watchers.Clear();
             InitTypeConfigWatcher();
         }

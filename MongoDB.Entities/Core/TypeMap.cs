@@ -9,7 +9,7 @@ namespace MongoDB.Entities;
 static class TypeMap {
     static readonly ConcurrentDictionary<Type, IMongoDatabase> _typeToDbMap = new();
     static readonly ConcurrentDictionary<Type, string> _typeToCollMap = new();
-    static readonly ConcurrentDictionary<Type, TypeConfiguration?> _typeToCollectionMap = new();
+    static readonly ConcurrentDictionary<Type, DocumentTypeConfiguration?> _typeToCollectionMap = new();
     static readonly ConcurrentDictionary<Type, EmbeddedTypeConfiguration?> _typeToEmbeddedCollectMap = new();
 
     internal static void AddCollectionMapping(Type entityType, string collectionName)
@@ -31,7 +31,7 @@ static class TypeMap {
         _typeToEmbeddedCollectMap.Clear();
     }
 
-    internal static TypeConfiguration? GetTypeConfiguration(Type entityType) {
+    internal static DocumentTypeConfiguration? GetTypeConfiguration(Type entityType) {
         _typeToCollectionMap.TryGetValue(entityType, out var configuration);
 
         return configuration;
@@ -39,8 +39,12 @@ static class TypeMap {
 
     internal static EmbeddedTypeConfiguration? GetEmbeddedTypeConfiguration(Type entityType) {
         _typeToEmbeddedCollectMap.TryGetValue(entityType, out var configuration);
-
         return configuration;
+    }
+
+    internal static EmbeddedTypeConfiguration? GetEmbeddedTypeConfigByParent(Type parentType) {
+        var item=_typeToEmbeddedCollectMap.First(e => e.Value != null && e.Value.FieldDefinitions.ContainsKey(parentType.Name));
+        return item.Value;
     }
 
     internal static ICollection<Type> GetEmbeddedTypeConfigurationKeys()
@@ -49,7 +53,7 @@ static class TypeMap {
     internal static ICollection<Type> GetTypeConfigurationKeys()
         => _typeToCollectionMap.Keys;
 
-    internal static void AddUpdateTypeConfiguration(Type entityType, TypeConfiguration? typeConfiguration)
+    internal static void AddUpdateTypeConfiguration(Type entityType, DocumentTypeConfiguration? typeConfiguration)
         => _typeToCollectionMap[entityType] = typeConfiguration;
 
     internal static void AddUpdateEmbeddedTypeConfiguration(Type entityType,

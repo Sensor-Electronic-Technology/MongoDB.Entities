@@ -16,7 +16,7 @@ static class Cache<T> where T : IEntity {
     internal static IMongoDatabase Database { get; private set; } = null!;
     internal static IMongoCollection<T> Collection { get; private set; } = null!;
     internal static string CollectionName { get; private set; } = null!;
-    internal static TypeConfiguration? TypeConfiguration { get; private set; }
+    internal static DocumentTypeConfiguration? TypeConfiguration { get; private set; }
     internal static ConcurrentDictionary<string, Watcher<T>> Watchers { get; private set; } = null!;
     internal static bool HasCreatedOn { get; private set; }
     internal static bool HasModifiedOn { get; private set; }
@@ -98,8 +98,8 @@ static class Cache<T> where T : IEntity {
         }
     }
 
-    static void UpdateTypeConfiguration(TypeConfiguration typeConfiguration) {
-        TypeConfiguration = typeConfiguration;
+    static void UpdateTypeConfiguration(DocumentTypeConfiguration documentTypeConfiguration) {
+        TypeConfiguration = documentTypeConfiguration;
     }
 
     internal static IEnumerable<PropertyInfo> UpdatableProps(T entity) {

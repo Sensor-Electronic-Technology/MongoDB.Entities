@@ -15,20 +15,31 @@ await DB.InitAsync(
     enableLogging: true,
     assemblies: [typeof(EpiRun).Assembly]);
 
-//await GenerateEpiData();
-//await TestOneToMany();
+/*await GenerateEpiData();
+await BuildMigration();
+await DB.ApplyMigrations();
+
+Console.WriteLine("Press any key to build and apply embedded migration");
+Console.ReadLine();
+await BuildEmbeddedMigration();
+await BuildEmbeddedMigration2();
+await DB.ApplyMigrations();*/
+
+/*await BuildEmbeddedMigration();
+await BuildEmbeddedMigration2();
+await DB.ApplyMigrations();*/
+
+
+
+//await DB.RevertMigration(2);
+
 //await BuildMigrationNew();
 //await DB.ApplyMigrations();
 //await BuildEmbeddedMigration();
-
 //await DB.ApplyMigrations();
+
 //await TestAddNewWithCustomFieldData();
-
-/*await AddNewDataWithTestEmbeddedNotArray();
-await BuildEmbeddedMigrationNotArray();*/
-//await DB.ApplyMigrations();
-/*var wafer=await DB.Find<EpiRun>().Match(e => e.WaferId == "B09-9998-96").ExecuteSingleAsync();
-Console.WriteLine($"Wafer Found: {wafer.WaferId}");*/
+await TestUpdateWithMigration();
 
 async Task AddNewDataWithTestEmbeddedNotArray() {
     var rand = new Random();
@@ -46,6 +57,27 @@ async Task AddNewDataWithTestEmbeddedNotArray() {
     await run.SaveAsync();
 }
 
+async Task TestUpdateWithMigration() {
+    var rand = new Random();
+    var now = DateTime.Now;
+    var run = await DB.Find<EpiRun>().Match(e => e.WaferId == "B09-9998-97").ExecuteSingleAsync();
+
+    if (run == null) {
+        Console.WriteLine("Run not found");
+        return;
+    }
+
+    var qt=await run.QuickTest.ToEntityAsync();
+    qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "E", now));
+    qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "Q", now));
+    qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "J", now));
+    qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "K", now));
+
+    await qt.SaveMigrateAsync();
+    
+    Console.WriteLine("Completed, Check Database");
+}
+
 async Task TestAddNewWithCustomFieldData() {
     var rand = new Random();
     var now = DateTime.Now;
@@ -56,6 +88,7 @@ async Task TestAddNewWithCustomFieldData() {
         RunTypeId = "Prod",
         SystemId = "B09",
     };
+    
 
     var quickTestData = new QuickTest {
         WaferId = run.WaferId,
@@ -80,20 +113,13 @@ async Task TestAddNewWithCustomFieldData() {
         }
     };
     var collectionName = DB.CollectionName<QuickTest>();
-    var typeConfig = await DB.Collection<TypeConfiguration>()
+    /*var typeConfig = await DB.Collection<DocumentTypeConfiguration>()
                              .Find(e => e.CollectionName == collectionName)
-                             .FirstOrDefaultAsync();
-    var dict = new Dictionary<string, object>() {
-        {
-            "Qt Summary", new Dictionary<string, object>() {
-                { "Power2", 456.76 }, { "Voltage2", 54.2 }
-            }
-        }
-    };
+                             .FirstOrDefaultAsync();*/
 
     await run.SaveAsync();
 
-    await quickTestData.SaveMigrateAsync(additionalData: dict);
+    await quickTestData.SaveMigrateAsync();
     run.QuickTest = quickTestData.ToReference();
     quickTestData.EpiRun = run.ToReference();
     await run.SaveAsync();
@@ -173,7 +199,7 @@ async Task DropAllCollections() {
     await DB.DropCollectionAsync<QuickTest>();
     await DB.DropCollectionAsync<XrdData>();
     await DB.DropCollectionAsync<DocumentMigration>();
-    await DB.DropCollectionAsync<TypeConfiguration>();
+    await DB.DropCollectionAsync<DocumentTypeConfiguration>();
 }
 
 async Task BuildEmbeddedMigrationNotArray() {
@@ -194,18 +220,18 @@ async Task BuildEmbeddedMigrationNotArray() {
     };
     builder.AddField(valueField);
     EmbeddedTypeConfiguration? typeConfig =
-        EmbeddedTypeConfiguration.CreateOnline<EpiRun,TestEmbeddedNotArray>(
+        await EmbeddedTypeConfiguration.CreateOnline<EpiRun,TestEmbeddedNotArray>(
             ["TestEmbeddedNotArray"]);
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration.CreateOnline failed!");
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnline failed!");
         return;
     }
     await typeConfig.SaveAsync();
-    var migration = builder.Build(typeConfig, migrationNumber);
+    var migration = builder.Build(typeConfig, migrationNumber,typeof(EpiRun).AssemblyQualifiedName ?? string.Empty);
     await migration.SaveAsync();
 
-    //migration.TypeConfiguration = typeConfig.ToReference();
-    await typeConfig.Migrations.AddAsync(migration);
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
+    await typeConfig.EmbeddedMigrations.AddAsync(migration);
     await migration.SaveAsync();
     Console.WriteLine("Migration Created");
 }
@@ -237,20 +263,56 @@ async Task BuildEmbeddedMigration() {
     builder.AddField(valueField);
     builder.AddField(valueField2);
     EmbeddedTypeConfiguration? typeConfig =
-        EmbeddedTypeConfiguration.CreateOnline<QuickTest, QtMeasurement>(
+        await EmbeddedTypeConfiguration.CreateOnline<QuickTest, QtMeasurement>(
             ["InitialMeasurements", "FinalMeasurements"],
             true);
 
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration.CreateOnly failed!");
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnly failed!");
         return;
     }
     await typeConfig.SaveAsync();
-    var migration = builder.Build(typeConfig, migrationNumber);
+    var migration = builder.Build(typeConfig, migrationNumber,nameof(QuickTest) ?? string.Empty);
     await migration.SaveAsync();
 
-    //migration.TypeConfiguration = typeConfig.ToReference();
-    await typeConfig.Migrations.AddAsync(migration);
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
+    await typeConfig.EmbeddedMigrations.AddAsync(migration);
+    await migration.SaveAsync();
+    Console.WriteLine("Migration Created");
+}
+
+async Task BuildEmbeddedMigration2() {
+    var migrationNumber = await DB.Collection<DocumentMigration>()
+                                  .Find(_ => true)
+                                  .SortByDescending(e => e.MigrationNumber)
+                                  .Project(e => e.MigrationNumber)
+                                  .FirstOrDefaultAsync();
+    Console.WriteLine("Migration Number: " + migrationNumber);
+
+    MigrationBuilder builder = new MigrationBuilder();
+    ValueField valueField = new ValueField() {
+        FieldName = "WPE",
+        TypeCode = TypeCode.Double,
+        BsonType = BsonType.Double,
+        DataType = DataType.NUMBER,
+        DefaultValue = 0.00
+    };
+    builder.AddField(valueField);
+    EmbeddedTypeConfiguration? typeConfig =
+        await EmbeddedTypeConfiguration.CreateOnline<QuickTest, QtMeasurement>(
+            ["InitialMeasurements", "FinalMeasurements"],
+            true);
+
+    if (typeConfig == null) {
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnline failed!");
+        return;
+    }
+    await typeConfig.SaveAsync();
+    var migration = builder.Build(typeConfig, migrationNumber,nameof(QuickTest) ?? string.Empty);
+    await migration.SaveAsync();
+
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
+    await typeConfig.EmbeddedMigrations.AddAsync(migration);
     await migration.SaveAsync();
     Console.WriteLine("Migration Created");
 }
@@ -285,10 +347,10 @@ async Task BuildMigrationNew() {
         ]
     };
     builder.AddField(objField);
-    TypeConfiguration? typeConfig = TypeConfiguration.CreateOnline<QuickTest>();
+    DocumentTypeConfiguration? typeConfig = DocumentTypeConfiguration.CreateOnline<QuickTest>();
 
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration.CreateOnly failed!");
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnly failed!");
 
         return;
     }
@@ -296,7 +358,7 @@ async Task BuildMigrationNew() {
     var migration = builder.Build(typeConfig, migrationNumber);
     await migration.SaveAsync();
 
-    //migration.TypeConfiguration = typeConfig.ToReference();
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
     await typeConfig.Migrations.AddAsync(migration);
     await migration.SaveAsync();
     Console.WriteLine("Migration Created");
@@ -403,10 +465,10 @@ async Task BuildMigration() {
         ]
     };
     builder.AddField(objField);
-    TypeConfiguration? typeConfig = TypeConfiguration.CreateOnline<QuickTest>();
+    DocumentTypeConfiguration? typeConfig = DocumentTypeConfiguration.CreateOnline<QuickTest>();
 
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration.CreateOnly failed!");
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnly failed!");
 
         return;
     }
@@ -414,7 +476,7 @@ async Task BuildMigration() {
     var migration = builder.Build(typeConfig, migrationNumber);
     await migration.SaveAsync();
 
-    //migration.TypeConfiguration = typeConfig.ToReference();
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
     await typeConfig.Migrations.AddAsync(migration);
     await migration.SaveAsync();
     Console.WriteLine("Migration Created");
@@ -427,12 +489,12 @@ async Task BuildMigration2() {
                                   .Project(e => e.MigrationNumber)
                                   .FirstOrDefaultAsync();
     var collectionName = DB.CollectionName<QuickTest>();
-    var typeConfig = await DB.Collection<TypeConfiguration>()
+    var typeConfig = await DB.Collection<DocumentTypeConfiguration>()
                              .Find(e => e.CollectionName == collectionName)
                              .FirstOrDefaultAsync();
 
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration not found");
+        Console.WriteLine("DocumentTypeConfiguration not found");
 
         return;
     }
@@ -507,12 +569,12 @@ async Task BuilderMigration3() {
                                   .Project(e => e.MigrationNumber)
                                   .FirstOrDefaultAsync();
     var collectionName = DB.CollectionName<QuickTest>();
-    var typeConfig = await DB.Collection<TypeConfiguration>()
+    var typeConfig = await DB.Collection<DocumentTypeConfiguration>()
                              .Find(e => e.CollectionName == collectionName)
                              .FirstOrDefaultAsync();
 
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration not found");
+        Console.WriteLine("DocumentTypeConfiguration not found");
 
         return;
     }
@@ -837,7 +899,7 @@ async Task GenerateEpiData() {
     List<QuickTest> quickTests = [];
     List<XrdData> xrdMeasurementData = [];
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= 5; i++) {
         for (int x = 1; x <= 10; x++) {
             EpiRun run = new EpiRun {
                 RunTypeId = (rand.NextDouble() > .5) ? "Prod" : "Rnd",
@@ -1091,7 +1153,7 @@ async Task TestTypeConfigAvailableProperties() {
             }
         ]
     };
-    var typeConfig = TypeConfiguration.CreateOnline<EpiRun>();
+    var typeConfig = DocumentTypeConfiguration.CreateOnline<EpiRun>();
 
     if (typeConfig != null) {
         typeConfig.Fields.Add(objField);
@@ -1099,7 +1161,7 @@ async Task TestTypeConfigAvailableProperties() {
         await typeConfig.SaveAsync();
         Console.WriteLine("Check database");
     } else {
-        Console.WriteLine("Error TypeConfiguration.Create failed");
+        Console.WriteLine("Error DocumentTypeConfiguration.Create failed");
     }
 }
 

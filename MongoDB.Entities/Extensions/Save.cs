@@ -14,10 +14,11 @@ public static partial class Extensions {
     /// <param name="entity">An entity of type IDocumentEntity</param>
     /// <param name="additionalData">Optional dictionary data to fill data after migration</param>
     /// <param name="cancellation">An optional cancellation token</param>
-    public static async Task ApplyMigration<T>(this T entity, Dictionary<string, object>? additionalData = null,CancellationToken cancellation = default)
+    public static async Task ApplyMigration<T>(this T entity, Dictionary<string, object>? additionalData = null,
+                                               CancellationToken cancellation = default)
         where T : IDocumentEntity {
         if (entity is IDocumentEntity ent) {
-             await DB.ApplyMigrations(ent, additionalData, cancellation: default);
+             await DB.ApplyMigrations(ent, additionalData, cancellation);
         }
     }
     

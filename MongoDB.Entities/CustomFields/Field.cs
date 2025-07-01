@@ -9,7 +9,7 @@ namespace MongoDB.Entities;
 
 
 /// <summary>
-/// For the AvailableProperties property in <see cref="TypeConfiguration"/>
+/// For the AvailableProperties property in <see cref="DocumentTypeConfiguration"/>
 /// Useful for the UI layer when displaying custom fields in a table
 /// </summary>
 [BsonDiscriminator(RootClass = true), 

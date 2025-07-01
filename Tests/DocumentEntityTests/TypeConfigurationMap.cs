@@ -7,7 +7,7 @@ using MongoDB.Entities.Tests.Models;
 
 namespace MongoDB.Entities.Tests;
 
-[TestCategory("TypeConfiguration"),TestClass]
+[TestCategory("DocumentTypeConfiguration"),TestClass]
 public class TypeConfigurationMap {
 
     [TestMethod]
@@ -20,7 +20,7 @@ public class TypeConfigurationMap {
     [TestMethod]
     public async Task test_type_configuration_watcher_created() {
         await InitTest.InitTestDatabase(assemblies: typeof(EpiRun).Assembly);
-        var watchers=DB.Watchers<TypeConfiguration>();
+        var watchers=DB.Watchers<DocumentTypeConfiguration>();
         Assert.IsNotEmpty(watchers);
     }
     
@@ -33,7 +33,7 @@ public class TypeConfigurationMap {
     [TestMethod]
     public async Task test_type_configuration_watcher_insert() {
         await InitTest.InitTestDatabase(assemblies: typeof(EpiRun).Assembly);
-        TypeConfiguration? config = TypeConfiguration.CreateOnline<XrdData>();
+        DocumentTypeConfiguration? config = DocumentTypeConfiguration.CreateOnline<XrdData>();
         Assert.IsNotNull(config);
         await config.SaveAsync();
         await Task.Delay(500);
@@ -44,7 +44,7 @@ public class TypeConfigurationMap {
     [TestMethod]
     public async Task test_type_configuration_watcher_update() {
         await InitTest.InitTestDatabase(assemblies: typeof(EpiRun).Assembly);
-        var typeConfig = await DB.Find<TypeConfiguration>()
+        var typeConfig = await DB.Find<DocumentTypeConfiguration>()
                                  .Match(x => x.CollectionName == DB.CollectionName<XrdData>())
                                  .ExecuteSingleAsync();
         Assert.IsNotNull(typeConfig);
@@ -66,13 +66,13 @@ public class TypeConfigurationMap {
     [TestMethod]
     public async Task test_type_configuration_watcher_delete() {
         await InitTest.InitTestDatabase(assemblies: typeof(EpiRun).Assembly);
-        var typeConfig = await DB.Find<TypeConfiguration>()
+        var typeConfig = await DB.Find<DocumentTypeConfiguration>()
                                  .Match(x => x.CollectionName == DB.CollectionName<XrdData>())
                                  .ExecuteSingleAsync();
         Assert.IsNotNull(typeConfig);
         await typeConfig.DeleteAsync();
         
-        typeConfig = await DB.Collection<TypeConfiguration>().Find(e=>e.ID==typeConfig.ID).FirstOrDefaultAsync();
+        typeConfig = await DB.Collection<DocumentTypeConfiguration>().Find(e=>e.ID==typeConfig.ID).FirstOrDefaultAsync();
         Assert.IsNull(typeConfig);
         await Task.Delay(500); 
         Assert.IsNull(DB.TypeConfiguration<XrdData>());

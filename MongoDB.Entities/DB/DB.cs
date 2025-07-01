@@ -78,7 +78,7 @@ public static partial class DB {
 
     /// <summary>
     /// Initializes a MongoDB connection, scans given assemblies for DocumentEntity types,
-    /// and preloads TypeConfiguration for the types scanned from the assemblies
+    /// and preloads DocumentTypeConfiguration for the types scanned from the assemblies
     /// <para>WARNING: will throw an error if server is not reachable!</para>
     /// You can call this method as many times as you want (such as in serverless functions) with the same parameters and the connections won't get
     /// duplicated.
@@ -128,7 +128,7 @@ public static partial class DB {
 
     internal static async Task ScanAssemblies(params Assembly[] assemblies) {
         Log(LogLevel.Information, "Scanning assemblies for DocumentEntities");
-        var typeConfigCollection = Cache<TypeConfiguration>.Collection;
+        var typeConfigCollection = Cache<DocumentTypeConfiguration>.Collection;
 
         foreach (var assembly in assemblies) {
             var types = assembly.DefinedTypes.Where(e => e.BaseType == typeof(IDocumentEntity)).ToList();
@@ -167,7 +167,7 @@ public static partial class DB {
 
     internal static void InitTypeConfigWatcher() {
         Log(LogLevel.Information, "Creating watcher for TypConfigurations");
-        var watcher = Watcher<TypeConfiguration>("type_config_internal_watcher");
+        var watcher = Watcher<DocumentTypeConfiguration>("type_config_internal_watcher");
         watcher.Start(
             eventTypes: EventType.Created | EventType.Updated | EventType.Deleted,
             batchSize: 5,
@@ -190,7 +190,7 @@ public static partial class DB {
         };
     }
 
-    internal static void HandleTypeConfigChanges(IEnumerable<ChangeStreamDocument<TypeConfiguration>> changes) {
+    internal static void HandleTypeConfigChanges(IEnumerable<ChangeStreamDocument<DocumentTypeConfiguration>> changes) {
         foreach (var change in changes) {
             switch (change.OperationType) {
                 case ChangeStreamOperationType.Delete: {
@@ -289,39 +289,43 @@ public static partial class DB {
         => Cache<T>.DbName;
 
     /// <summary>
-    /// Gets the TypeConfiguration for the give type of DocumentEntity
+    /// Gets the DocumentTypeConfiguration for the give type of DocumentEntity
     /// </summary>
     /// <typeparam name="TEntity">Any class that implements DocumentEntity</typeparam>
-    public static TypeConfiguration? TypeConfiguration<TEntity>() where TEntity : IDocumentEntity
+    public static DocumentTypeConfiguration? TypeConfiguration<TEntity>() where TEntity : IDocumentEntity
         => TypeMap.GetTypeConfiguration(typeof(TEntity));
     
     /// <summary>
-    /// Gets the TypeConfiguration for the give type of DocumentEntity
+    /// Gets the DocumentTypeConfiguration for the give type of DocumentEntity
     /// </summary>
     /// <typeparam name="TEntity">Any class that implements DocumentEntity</typeparam>
     public static EmbeddedTypeConfiguration? EmbeddedTypeConfiguration<TEntity>() where TEntity : IEmbeddedEntity
         => TypeMap.GetEmbeddedTypeConfiguration(typeof(TEntity));
 
+    public static EmbeddedTypeConfiguration? GetFromParent<TEntity>() where TEntity : IDocumentEntity {
+        return TypeMap.GetEmbeddedTypeConfigByParent(typeof(TEntity));
+    }
+
     /// <summary>
-    /// Gets the TypeConfiguration for the given Type of DocumentEntity
+    /// Gets the DocumentTypeConfiguration for the given Type of DocumentEntity
     /// </summary>
-    /// <param name="type">Type of type DocumentEntity to get the TypeConfiguration for</param>
-    public static TypeConfiguration? TypeConfiguration(Type type)
+    /// <param name="type">Type of type DocumentEntity to get the DocumentTypeConfiguration for</param>
+    public static DocumentTypeConfiguration? TypeConfiguration(Type type)
         => TypeMap.GetTypeConfiguration(type);
     
     /// <summary>
     /// Gets the EmbeddedTypeConfiguration for the given Type of IEmbeddedDocument
     /// </summary>
-    /// <param name="type">Type of type DocumentEntity to get the TypeConfiguration for</param>
-    public static TypeConfiguration? EmbeddedTypeConfiguration(Type type)
+    /// <param name="type">Type of type DocumentEntity to get the DocumentTypeConfiguration for</param>
+    public static EmbeddedTypeConfiguration? EmbeddedTypeConfiguration(Type type)
         => TypeMap.GetEmbeddedTypeConfiguration(type);
 
     /// <summary>
-    /// Updates the TypeConfiguration for the give type of DocumentEntity
+    /// Updates the DocumentTypeConfiguration for the give type of DocumentEntity
     /// </summary>
     /// <param name="type">Type of type DocumentEntity</param>
-    /// <param name="typeConfig">TypeConfiguration of the given type</param>
-    public static void AddUpdateTypeConfiguration(Type type, TypeConfiguration? typeConfig)
+    /// <param name="typeConfig">DocumentTypeConfiguration of the given type</param>
+    public static void AddUpdateTypeConfiguration(Type type, DocumentTypeConfiguration? typeConfig)
         => TypeMap.AddUpdateTypeConfiguration(type, typeConfig);
     
     /// <summary>
