@@ -18,9 +18,9 @@ public static partial class DB {
     public static async Task InsertAsync<T>(T entity,
                                             IClientSessionHandle? session = null,
                                             CancellationToken cancellation = default) where T : IEntity {
-        if (entity is IDocumentEntity ent) {
+        /*if (entity is IDocumentEntity ent) {
             await ApplyMigrations(ent, cancellation:cancellation);
-        }
+        }*/
         PrepAndCheckIfInsert(entity);
         if (session == null) {
             await Collection<T>().InsertOneAsync(entity, null, cancellation);
@@ -41,9 +41,9 @@ public static partial class DB {
                                                           CancellationToken cancellation = default) where T : IEntity {
         var models = new List<WriteModel<T>>(entities.Count());
         foreach (var entity in entities) {
-            if (entity is IDocumentEntity ent) {
+            /*if (entity is IDocumentEntity ent) {
                 await ApplyMigrations(ent, cancellation:cancellation);
-            }
+            }*/
             PrepAndCheckIfInsert(entity);
             models.Add(new InsertOneModel<T>(entity));
         }

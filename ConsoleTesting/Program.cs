@@ -3,33 +3,12 @@
 using System.Text.Json;
 using ConsoleTesting;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MongoDB.Entities;
-
-Console.WriteLine("Initializing Database...");
-await DB.InitAsync(
-    "mongodb-test-epidata",
-    "172.20.3.41",
-    enableLogging: true,
-    assemblies: [typeof(EpiRun).Assembly]);
-
-/*await GenerateEpiData();
-await BuildMigration();
-await DB.ApplyMigrations();
-
-Console.WriteLine("Press any key to build and apply embedded migration");
-Console.ReadLine();
-await BuildEmbeddedMigration();
-await BuildEmbeddedMigration2();
-await DB.ApplyMigrations();*/
-
-/*await BuildEmbeddedMigration();
-await BuildEmbeddedMigration2();
-await DB.ApplyMigrations();*/
-
-
 
 //await DB.RevertMigration(2);
 
@@ -39,23 +18,103 @@ await DB.ApplyMigrations();*/
 //await DB.ApplyMigrations();
 
 //await TestAddNewWithCustomFieldData();
-await TestUpdateWithMigration();
+//await TestUpdateWithMigration();
+//await qt.ApplyMigrations();
+Console.WriteLine("Initializing Database...");
+await DB.InitAsync(
+    "mongodb-test-epidata",
+    "172.20.3.41",
+    enableLogging: true,
+    assemblies: [typeof(EpiRun).Assembly]);
+/*await GenerateDataAndMigrations();*/
+/*Console.WriteLine("Press any key to add new data");
+Console.ReadLine();
+*/
+await AddNewRunWithQtData("B45-2442-05");
 
-async Task AddNewDataWithTestEmbeddedNotArray() {
+async Task GenerateDataAndMigrations() {
+    await GenerateEpiData();
+    await BuildMigration();
+    await DB.ApplyMigrations();
+
+    /*Console.WriteLine("Press any key to build and apply embedded migration");
+    Console.ReadLine();*/
+    await BuildEmbeddedMigration();
+    await BuildEmbeddedMigration2();
+    await DB.ApplyMigrations();
+}
+
+async Task AddNewRunWithQtData(string waferId) {
     var rand = new Random();
     var now = DateTime.Now;
+
+    
     EpiRun run = new EpiRun {
-        WaferId = "B09-9998-98",
-        RunNumber = "9998",
-        PocketNumber = "97",
+        WaferId = waferId,
+        RunNumber = waferId[4..8],
+        PocketNumber = waferId[9..10],
         RunTypeId = "Prod",
-        SystemId = "B09",
+        SystemId = waferId[..2],
     };
-    run.TestEmbeddedNotArray = new TestEmbeddedNotArray() {
-        Name = "TestEmbeddedNotArray",
+
+    var quickTestData = new QuickTest {
+        WaferId = run.WaferId,
+        TimeStamp = now,
+        InitialMeasurements = new List<QtMeasurement> {
+            GenerateQtMeasurement(rand, "A", now),
+            GenerateQtMeasurement(rand, "B", now),
+            GenerateQtMeasurement(rand, "C", now),
+            GenerateQtMeasurement(rand, "L", now),
+            GenerateQtMeasurement(rand, "R", now),
+            GenerateQtMeasurement(rand, "T", now),
+            GenerateQtMeasurement(rand, "G", now)
+        },
+        FinalMeasurements = new List<QtMeasurement> {
+            GenerateQtMeasurement(rand, "A", now),
+            GenerateQtMeasurement(rand, "B", now),
+            GenerateQtMeasurement(rand, "C", now),
+            GenerateQtMeasurement(rand, "L", now),
+            GenerateQtMeasurement(rand, "R", now),
+            GenerateQtMeasurement(rand, "T", now),
+            GenerateQtMeasurement(rand, "G", now)
+        }
     };
+
+    /*List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    await quickTestData.InitialMeasurements.ApplyEmbedded(typeof(QuickTest),data);
+    await quickTestData.FinalMeasurements.ApplyEmbedded(typeof(QuickTest),data);*/
+
     await run.SaveAsync();
+    await quickTestData.ApplyMigrations();
+    await quickTestData.SaveAsync();
+    
+    run.QuickTest = quickTestData.ToReference();
+    quickTestData.EpiRun = run.ToReference();
+    await run.SaveAsync();
+    await quickTestData.SaveAsync();
 }
+
 
 async Task TestUpdateWithMigration() {
     var rand = new Random();
@@ -67,14 +126,14 @@ async Task TestUpdateWithMigration() {
         return;
     }
 
-    var qt=await run.QuickTest.ToEntityAsync();
+    var qt = await run.QuickTest.ToEntityAsync();
     qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "E", now));
     qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "Q", now));
     qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "J", now));
     qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "K", now));
 
-    await qt.SaveMigrateAsync();
-    
+    await qt.ApplyMigrations();
+    await qt.SaveAsync();
     Console.WriteLine("Completed, Check Database");
 }
 
@@ -88,7 +147,6 @@ async Task TestAddNewWithCustomFieldData() {
         RunTypeId = "Prod",
         SystemId = "B09",
     };
-    
 
     var quickTestData = new QuickTest {
         WaferId = run.WaferId,
@@ -118,8 +176,8 @@ async Task TestAddNewWithCustomFieldData() {
                              .FirstOrDefaultAsync();*/
 
     await run.SaveAsync();
+    await quickTestData.ApplyMigrations();
 
-    await quickTestData.SaveMigrateAsync();
     run.QuickTest = quickTestData.ToReference();
     quickTestData.EpiRun = run.ToReference();
     await run.SaveAsync();
@@ -220,14 +278,14 @@ async Task BuildEmbeddedMigrationNotArray() {
     };
     builder.AddField(valueField);
     EmbeddedTypeConfiguration? typeConfig =
-        await EmbeddedTypeConfiguration.CreateOnline<EpiRun,TestEmbeddedNotArray>(
-            ["TestEmbeddedNotArray"]);
+        await EmbeddedTypeConfiguration.CreateOnline<EpiRun, TestEmbeddedNotArray>(["TestEmbeddedNotArray"]);
     if (typeConfig == null) {
         Console.WriteLine("DocumentTypeConfiguration.CreateOnline failed!");
         return;
     }
+
     await typeConfig.SaveAsync();
-    var migration = builder.Build(typeConfig, migrationNumber,typeof(EpiRun).AssemblyQualifiedName ?? string.Empty);
+    var migration = builder.Build(typeConfig, migrationNumber, typeof(EpiRun).AssemblyQualifiedName ?? string.Empty);
     await migration.SaveAsync();
 
     //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
@@ -271,8 +329,9 @@ async Task BuildEmbeddedMigration() {
         Console.WriteLine("DocumentTypeConfiguration.CreateOnly failed!");
         return;
     }
+
     await typeConfig.SaveAsync();
-    var migration = builder.Build(typeConfig, migrationNumber,nameof(QuickTest) ?? string.Empty);
+    var migration = builder.Build(typeConfig, migrationNumber, nameof(QuickTest) ?? string.Empty);
     await migration.SaveAsync();
 
     //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
@@ -307,8 +366,9 @@ async Task BuildEmbeddedMigration2() {
         Console.WriteLine("DocumentTypeConfiguration.CreateOnline failed!");
         return;
     }
+
     await typeConfig.SaveAsync();
-    var migration = builder.Build(typeConfig, migrationNumber,nameof(QuickTest) ?? string.Empty);
+    var migration = builder.Build(typeConfig, migrationNumber, nameof(QuickTest) ?? string.Empty);
     await migration.SaveAsync();
 
     //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
@@ -354,6 +414,7 @@ async Task BuildMigrationNew() {
 
         return;
     }
+
     await typeConfig.SaveAsync();
     var migration = builder.Build(typeConfig, migrationNumber);
     await migration.SaveAsync();
@@ -472,6 +533,7 @@ async Task BuildMigration() {
 
         return;
     }
+
     await typeConfig.SaveAsync();
     var migration = builder.Build(typeConfig, migrationNumber);
     await migration.SaveAsync();
@@ -498,6 +560,7 @@ async Task BuildMigration2() {
 
         return;
     }
+
     var field = typeConfig.Fields.FirstOrDefault(e => e.FieldName == "Qt Summary");
 
     if (field == null) {
@@ -505,6 +568,7 @@ async Task BuildMigration2() {
 
         return;
     }
+
     var updatedField = FastCloner.FastCloner.DeepClone(field as ObjectField);
     var filter = new Filter {
         FieldName = nameof(QtMeasurement.Power),
@@ -701,8 +765,10 @@ async Task MigrateOnInsert() {
     await quickTestData.SaveAsync();
     run.QuickTest = quickTestData.ToReference();
     quickTestData.EpiRun = run.ToReference();
-    await run.SaveMigrateAsync();
-    await quickTestData.SaveMigrateAsync();
+    await run.ApplyMigrations();
+    await quickTestData.ApplyMigrations();
+    /*await run.SaveMigrateAsync();
+    await quickTestData.SaveMigrateAsync();*/
 }
 
 async Task UndoMigration(int number = 2) {
@@ -930,6 +996,7 @@ async Task GenerateEpiData() {
                 ledId_P += $"-0{x}";
                 run.PocketNumber = $"0{x}";
             }
+
             run.WaferId = ledId_P;
             epiRuns.Add(run);
             /*await run.SaveAsync();*/
@@ -973,6 +1040,7 @@ async Task GenerateEpiData() {
             await run.XrdMeasurements.AddAsync(xrdMeasurements);*/
         } //end pocked for loop
     }     //end run number for loop
+
     await epiRuns.SaveAsync();
     await quickTests.SaveAsync();
     await xrdMeasurementData.SaveAsync();
@@ -1206,4 +1274,9 @@ public class Book : Entity {
 
 public class AuthorWithBooks : Author {
     public Book[] AllBooks { get; set; }
+}
+
+public class TestObject {
+    public int Value1 { get; set; }
+    public int Value2 { get; set; }
 }

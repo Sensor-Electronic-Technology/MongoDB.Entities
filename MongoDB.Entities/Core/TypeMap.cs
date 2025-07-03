@@ -42,11 +42,6 @@ static class TypeMap {
         return configuration;
     }
 
-    internal static EmbeddedTypeConfiguration? GetEmbeddedTypeConfigByParent(Type parentType) {
-        var item=_typeToEmbeddedCollectMap.First(e => e.Value != null && e.Value.FieldDefinitions.ContainsKey(parentType.Name));
-        return item.Value;
-    }
-
     internal static ICollection<Type> GetEmbeddedTypeConfigurationKeys()
         => _typeToEmbeddedCollectMap.Keys;
 

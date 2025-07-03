@@ -18,6 +18,8 @@ public class TemplateRun : IDocumentEntity, ICreatedOn, IModifiedOn {
     public DocumentVersion Version { get; set; }
     public DateTime CreatedOn { get; set; }
     public DateTime ModifiedOn { get; set; }
+    
+    public void UpdateEmbedded(IDocumentEntity entity) { }
 }
 
 public class TestEmbeddedNotArray : IEmbeddedEntity {
@@ -71,15 +73,13 @@ public class EpiRun : DocumentEntity,ICreatedOn,IModifiedOn {
 }
 
 [Collection("quick_tests")]
-public class QuickTest:DocumentEntity,ICreatedOn,IModifiedOn {
+public class QuickTest:DocumentEntity,ICreatedOn,IModifiedOn,IHasEmbedded {
     public string WaferId { get; set; }
     public DateTime TimeStamp { get; set; }
     public One<EpiRun> EpiRun { get; set; }
-    
     public ICollection<QtMeasurement> InitialMeasurements { get; set; } = new ObservableCollection<QtMeasurement>();
     public ICollection<QtMeasurement> FinalMeasurements { get; set; } = new ObservableCollection<QtMeasurement>();
     
-
     static QuickTest() {
         DB.Index<QuickTest>()
           .Key(e=>e.WaferId,KeyType.Descending)
@@ -88,6 +88,15 @@ public class QuickTest:DocumentEntity,ICreatedOn,IModifiedOn {
     }
     public DateTime CreatedOn { get; set; }
     public DateTime ModifiedOn { get; set; }
+    public void UpdateEmbedded(IDocumentEntity entity) {
+        this.FinalMeasurements=((QuickTest)entity).FinalMeasurements;
+        this.InitialMeasurements=((QuickTest)entity).InitialMeasurements;
+    }
+
+    public async Task ApplyEmbeddedMigrations() {
+        await this.FinalMeasurements.ApplyEmbedded(typeof(QuickTest));
+        await this.InitialMeasurements.ApplyEmbedded(typeof(QuickTest));   
+    }
 }
 
 [Collection("xrd_data")]

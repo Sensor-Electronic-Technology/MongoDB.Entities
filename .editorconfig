@@ -5,20 +5,26 @@ insert_final_newline = false
 indent_style = space
 indent_size = 4
 
+# ReSharper properties
+resharper_blank_lines_before_block_statements = 0
+resharper_blank_lines_before_control_transfer_statements = 0
+resharper_csharp_keep_blank_lines_in_code = 0
+resharper_parentheses_redundancy_style = remove
+
 [{*.har,*.json}]
 indent_size = 2
 
 [*.{received,verified}.{txt,xml,json}]
 charset = "utf-8-bom"
 end_of_line = lf
-indent_size = unset
-indent_style = unset
+indent_size = 
+indent_style = 
 insert_final_newline = false
-tab_width = unset
+tab_width = 
 trim_trailing_whitespace = false
 
 [{*Request.cs,*Response.cs,*Model*.cs,*Endpoint.cs}]
-dotnet_diagnostic.CS8618.severity = none
+dotnet_diagnostic.cs8618.severity = none
 
 [*.cs]
 csharp_new_line_before_members_in_object_initializers = false
@@ -75,10 +81,10 @@ resharper_align_multline_type_parameter_list = true
 resharper_align_tuple_components = true
 resharper_apply_auto_detected_rules = false
 resharper_autodetect_indent_settings = true
-resharper_blank_lines_after_block_statements = 0
+resharper_blank_lines_after_block_statements = 1
 resharper_blank_lines_after_control_transfer_statements = 1
-resharper_blank_lines_before_block_statements = 1
-resharper_blank_lines_before_control_transfer_statements = 1
+resharper_blank_lines_before_block_statements = 0
+resharper_blank_lines_before_control_transfer_statements = 0
 resharper_blank_lines_before_single_line_comment = 1
 resharper_braces_for_dowhile = required_for_multiline
 resharper_braces_for_fixed = required_for_multiline

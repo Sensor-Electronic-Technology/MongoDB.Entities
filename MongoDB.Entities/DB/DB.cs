@@ -129,10 +129,19 @@ public static partial class DB {
     internal static async Task ScanAssemblies(params Assembly[] assemblies) {
         Log(LogLevel.Information, "Scanning assemblies for DocumentEntities");
         var typeConfigCollection = Cache<DocumentTypeConfiguration>.Collection;
+        var embedConfigCollection = Cache<EmbeddedTypeConfiguration>.Collection;
 
         foreach (var assembly in assemblies) {
-            var types = assembly.DefinedTypes.Where(e => e.BaseType == typeof(IDocumentEntity)).ToList();
+            var types = assembly.DefinedTypes
+                                .Where(e => e.ImplementedInterfaces.Contains(typeof(IDocumentEntity)))
+                                .ToList();
+            var embeddedTypes = assembly.DefinedTypes.Where(e => e.ImplementedInterfaces.Contains(typeof(IEmbeddedEntity)));
 
+            foreach (var eType in embeddedTypes) {
+                var typeConfig = await embedConfigCollection.Find(e => e.TypeName==eType.Name)
+                                                            .SingleOrDefaultAsync();
+                TypeMap.AddUpdateEmbeddedTypeConfiguration(eType,typeConfig);
+            }
             foreach (var type in types) {
                 var collectionAttribute = type.GetCustomAttribute<CollectionAttribute>(false);
                 var collectionName = collectionAttribute != null ? collectionAttribute.Name : type.Name;
@@ -296,15 +305,11 @@ public static partial class DB {
         => TypeMap.GetTypeConfiguration(typeof(TEntity));
     
     /// <summary>
-    /// Gets the DocumentTypeConfiguration for the give type of DocumentEntity
+    /// Gets the DocumentTypeConfiguration for the give type of IEmbeddedEntity
     /// </summary>
-    /// <typeparam name="TEntity">Any class that implements DocumentEntity</typeparam>
+    /// <typeparam name="TEntity">Any class that implements IEmbeddedEntity</typeparam>
     public static EmbeddedTypeConfiguration? EmbeddedTypeConfiguration<TEntity>() where TEntity : IEmbeddedEntity
         => TypeMap.GetEmbeddedTypeConfiguration(typeof(TEntity));
-
-    public static EmbeddedTypeConfiguration? GetFromParent<TEntity>() where TEntity : IDocumentEntity {
-        return TypeMap.GetEmbeddedTypeConfigByParent(typeof(TEntity));
-    }
 
     /// <summary>
     /// Gets the DocumentTypeConfiguration for the given Type of DocumentEntity

@@ -24,7 +24,7 @@ public static partial class DB {
     public static async Task SaveMigrateAsync<T>(T entity,Dictionary<string,object>? additionalData=null,IClientSessionHandle? session = null,
                                                  CancellationToken cancellation = default) where T : IDocumentEntity {
         var filter = Builders<T>.Filter.Eq(Cache<T>.IdPropName, entity.GetId());
-        await ApplyMigrations(entity,additionalData,cancellation: cancellation);
+        /*await ApplyMigrations(entity,additionalData,cancellation: cancellation);*/
 
         if (PrepAndCheckIfInsert(entity)) {
             if (session == null) {
