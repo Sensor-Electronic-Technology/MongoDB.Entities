@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Collections;
 using System.Text.Json;
 using ConsoleTesting;
 using MongoDB.Bson;
@@ -20,17 +21,21 @@ using MongoDB.Entities;
 //await TestAddNewWithCustomFieldData();
 //await TestUpdateWithMigration();
 //await qt.ApplyMigrations();
+
 Console.WriteLine("Initializing Database...");
 await DB.InitAsync(
     "mongodb-test-epidata",
     "172.20.3.41",
     enableLogging: true,
     assemblies: [typeof(EpiRun).Assembly]);
+
 /*await GenerateDataAndMigrations();*/
 /*Console.WriteLine("Press any key to add new data");
 Console.ReadLine();
 */
-await AddNewRunWithQtData("B45-2442-05");
+//await AddNewRunWithQtData("B15-9661-35");
+Console.WriteLine($"Types: {DB.DisplayTypes()}");
+Console.WriteLine($"Types: {DB.DisplayEmbeddedTypes()}");
 
 async Task GenerateDataAndMigrations() {
     await GenerateEpiData();
@@ -80,7 +85,7 @@ async Task AddNewRunWithQtData(string waferId) {
         }
     };
 
-    /*List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
+    List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
     data.Add(new Dictionary<string, object>() {
         {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
     });
@@ -103,16 +108,16 @@ async Task AddNewRunWithQtData(string waferId) {
         {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
     });
     await quickTestData.InitialMeasurements.ApplyEmbedded(typeof(QuickTest),data);
-    await quickTestData.FinalMeasurements.ApplyEmbedded(typeof(QuickTest),data);*/
+    await quickTestData.FinalMeasurements.ApplyEmbedded(typeof(QuickTest),data);
 
     await run.SaveAsync();
-    await quickTestData.ApplyMigrations();
+    //await quickTestData.ApplyMigrations();
     await quickTestData.SaveAsync();
     
     run.QuickTest = quickTestData.ToReference();
     quickTestData.EpiRun = run.ToReference();
-    await run.SaveAsync();
-    await quickTestData.SaveAsync();
+    await run.SaveMigrateAsync();
+    await quickTestData.SaveMigrateAsync();
 }
 
 
@@ -132,8 +137,8 @@ async Task TestUpdateWithMigration() {
     qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "J", now));
     qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "K", now));
 
-    await qt.ApplyMigrations();
     await qt.SaveAsync();
+    //await qt.SaveAsync();
     Console.WriteLine("Completed, Check Database");
 }
 
@@ -176,7 +181,7 @@ async Task TestAddNewWithCustomFieldData() {
                              .FirstOrDefaultAsync();*/
 
     await run.SaveAsync();
-    await quickTestData.ApplyMigrations();
+    await quickTestData.SaveAsync();
 
     run.QuickTest = quickTestData.ToReference();
     quickTestData.EpiRun = run.ToReference();
@@ -765,10 +770,13 @@ async Task MigrateOnInsert() {
     await quickTestData.SaveAsync();
     run.QuickTest = quickTestData.ToReference();
     quickTestData.EpiRun = run.ToReference();
-    await run.ApplyMigrations();
-    await quickTestData.ApplyMigrations();
+    /*await run.ApplyMigrations();
+    await quickTestData.ApplyMigrations();*/
     /*await run.SaveMigrateAsync();
     await quickTestData.SaveMigrateAsync();*/
+    await run.SaveAsync();
+    await quickTestData.SaveAsync();
+    
 }
 
 async Task UndoMigration(int number = 2) {

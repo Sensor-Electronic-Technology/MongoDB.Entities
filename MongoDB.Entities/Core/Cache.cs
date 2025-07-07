@@ -20,6 +20,8 @@ static class Cache<T> where T : IEntity {
     internal static ConcurrentDictionary<string, Watcher<T>> Watchers { get; private set; } = null!;
     internal static bool HasCreatedOn { get; private set; }
     internal static bool HasModifiedOn { get; private set; }
+    internal static bool IsDocumentEntity { get; private set; }
+    internal static bool HasEmbeddedEntity { get; private set; }
     internal static string ModifiedOnPropName { get; private set; } = null!;
     internal static PropertyInfo? ModifiedByProp { get; private set; }
     internal static bool HasIgnoreIfDefaultProps { get; private set; }
@@ -28,7 +30,7 @@ static class Cache<T> where T : IEntity {
     internal static Func<T, object?> IdSelector { get; private set; } = null!;
     internal static Action<object, object> IdSetter { get; private set; } = null!;
     internal static Func<object, object> IdGetter { get; private set; } = null!;
-
+    
     static PropertyInfo[] _updatableProps = [];
     static ProjectionDefinition<T>? _requiredPropsProjection;
 
@@ -49,8 +51,7 @@ static class Cache<T> where T : IEntity {
             IdGetter = type.GetterForProp(IdPropName);
             IdSetter = type.SetterForProp(IdPropName);
         } else {
-            throw new InvalidOperationException(
-                $"Type {type.FullName} must specify an Identity property. '_id', 'Id', 'ID', or [BsonId] annotation expected!");
+            throw new InvalidOperationException($"Type {type.FullName} must specify an Identity property. '_id', 'Id', 'ID', or [BsonId] annotation expected!");
         }
 
         Database = TypeMap.GetDatabase(type);
@@ -69,30 +70,30 @@ static class Cache<T> where T : IEntity {
 
         Watchers = new();
 
-        //Get CreatedOn and ModifiedOn interfaces
+        //Get CreatedOn,ModifiedOn,IDocumentEntity,IHasEmbedded interfaces
         var interfaces = type.GetInterfaces();
+
         HasCreatedOn = interfaces.Any(i => i == typeof(ICreatedOn));
         HasModifiedOn = interfaces.Any(i => i == typeof(IModifiedOn));
-        ModifiedOnPropName = nameof(IModifiedOn.ModifiedOn);
+        IsDocumentEntity = interfaces.Any(i => i == typeof(IDocumentEntity));
+        HasEmbeddedEntity = interfaces.Any(i => i == typeof(IHasEmbedded));
 
+        ModifiedOnPropName = nameof(IModifiedOn.ModifiedOn);
         _updatableProps = type.GetProperties()
-                              .Where(
-                                  p =>
-                                      p.PropertyType.Name != ManyBase.PropTypeName &&
-                                      !p.IsDefined(typeof(BsonIdAttribute), false) &&
-                                      !p.IsDefined(typeof(BsonIgnoreAttribute), false))
+                              .Where(p =>
+                                  p.PropertyType.Name != ManyBase.PropTypeName &&
+                                  !p.IsDefined(typeof(BsonIdAttribute), false) &&
+                                  !p.IsDefined(typeof(BsonIgnoreAttribute), false))
                               .ToArray();
 
-        HasIgnoreIfDefaultProps = _updatableProps.Any(
-            p =>
-                p.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), false) ||
-                p.IsDefined(typeof(BsonIgnoreIfNullAttribute), false));
-        
+        HasIgnoreIfDefaultProps = _updatableProps.Any(p =>
+            p.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), false) ||
+            p.IsDefined(typeof(BsonIgnoreIfNullAttribute), false));
+
         try {
-            ModifiedByProp = _updatableProps.SingleOrDefault(
-                p =>
-                    p.PropertyType == typeof(ModifiedBy) ||
-                    p.PropertyType.IsSubclassOf(typeof(ModifiedBy)));
+            ModifiedByProp = _updatableProps.SingleOrDefault(p =>
+                p.PropertyType == typeof(ModifiedBy) ||
+                p.PropertyType.IsSubclassOf(typeof(ModifiedBy)));
         } catch (InvalidOperationException) {
             throw new InvalidOperationException("Multiple [ModifiedBy] properties are not allowed on entities!");
         }
@@ -104,16 +105,14 @@ static class Cache<T> where T : IEntity {
 
     internal static IEnumerable<PropertyInfo> UpdatableProps(T entity) {
         return HasIgnoreIfDefaultProps
-                   ? _updatableProps.Where(
-                       p =>
-                           !(p.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), false) &&
-                             p.GetValue(entity) == default) &&
-                           !(p.IsDefined(typeof(BsonIgnoreIfNullAttribute), false) && p.GetValue(entity) == null))
+                   ? _updatableProps.Where(p =>
+                       !(p.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), false) &&
+                         p.GetValue(entity) == default) &&
+                       !(p.IsDefined(typeof(BsonIgnoreIfNullAttribute), false) && p.GetValue(entity) == null))
                    : _updatableProps;
     }
 
-    internal static ProjectionDefinition<T, TProjection> CombineWithRequiredProps<TProjection>(
-        ProjectionDefinition<T, TProjection> userProjection) {
+    internal static ProjectionDefinition<T, TProjection> CombineWithRequiredProps<TProjection>(ProjectionDefinition<T, TProjection> userProjection) {
         if (userProjection == null)
             throw new InvalidOperationException("Please use .Project() method before .IncludeRequiredProps()");
 
@@ -125,8 +124,7 @@ static class Cache<T> where T : IEntity {
                         .Where(p => p.IsDefined(typeof(BsonRequiredAttribute), false));
 
             if (!props.Any())
-                throw new InvalidOperationException(
-                    "Unable to find any entity properties marked with [BsonRequired] attribute!");
+                throw new InvalidOperationException("Unable to find any entity properties marked with [BsonRequired] attribute!");
 
             foreach (var p in props) {
                 var attr = p.GetCustomAttribute<FieldAttribute>();
@@ -136,8 +134,7 @@ static class Cache<T> where T : IEntity {
             }
         }
 
-        ProjectionDefinition<T> userProj = userProjection.Render(
-            new(BsonSerializer.SerializerRegistry.GetSerializer<T>(), BsonSerializer.SerializerRegistry)).Document;
+        ProjectionDefinition<T> userProj = userProjection.Render(new(BsonSerializer.SerializerRegistry.GetSerializer<T>(), BsonSerializer.SerializerRegistry)).Document;
 
         return Builders<T>.Projection.Combine(_requiredPropsProjection, userProj);
     }

@@ -25,6 +25,8 @@ public class TemplateRun : IDocumentEntity, ICreatedOn, IModifiedOn {
 public class TestEmbeddedNotArray : IEmbeddedEntity {
     public string? Name { get; set; }
     public BsonDocument? AdditionalData { get; set; }
+    public async Task Migrate(Type parent)
+        => throw new NotImplementedException();
 }
 
 [Collection("epi_runs")]
@@ -77,8 +79,8 @@ public class QuickTest:DocumentEntity,ICreatedOn,IModifiedOn,IHasEmbedded {
     public string WaferId { get; set; }
     public DateTime TimeStamp { get; set; }
     public One<EpiRun> EpiRun { get; set; }
-    public ICollection<QtMeasurement> InitialMeasurements { get; set; } = new ObservableCollection<QtMeasurement>();
-    public ICollection<QtMeasurement> FinalMeasurements { get; set; } = new ObservableCollection<QtMeasurement>();
+    public List<QtMeasurement> InitialMeasurements { get; set; } = [];
+    public List<QtMeasurement> FinalMeasurements { get; set; } = [];
     
     static QuickTest() {
         DB.Index<QuickTest>()
@@ -124,6 +126,8 @@ public class QtMeasurement:IEmbeddedEntity {
     public double Current { get; set; }
     public double Wavelength { get; set; }
     public BsonDocument? AdditionalData { get; set; }
+    public Task Migrate(Type parent)
+        => this.ApplyEmbedded(parent);
 }
 
 public class XrdMeasurement:IEmbeddedEntity {
@@ -140,6 +144,8 @@ public class XrdMeasurement:IEmbeddedEntity {
     public double FHWM102 { get; set; }
 
     public BsonDocument? AdditionalData { get; set; }
+    public async Task Migrate(Type parent)
+        => throw new NotImplementedException();
 }
 
 [Collection("run_monitoring")]

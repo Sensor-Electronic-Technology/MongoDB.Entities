@@ -19,12 +19,12 @@ public partial class DBContext
     /// <typeparam name="T">The type of entity</typeparam>
     /// <param name="entity">The instance to persist</param>
     /// <param name="cancellation">And optional cancellation token</param>
-    public Task SaveAsync<T>(T entity, CancellationToken cancellation = default) where T : IEntity
+    public Task SaveAsync<T>(T entity,CancellationToken cancellation = default) where T : IEntity
     {
         SetModifiedBySingle(entity);
         OnBeforeSave<T>()?.Invoke(entity);
 
-        return DB.SaveAsync(entity, Session, cancellation);
+        return DB.SaveAsync(entity, session:Session, cancellation:cancellation);
     }
 
     /// <summary>
@@ -39,8 +39,8 @@ public partial class DBContext
         SetModifiedByMultiple(entities);
         foreach (var ent in entities)
             OnBeforeSave<T>()?.Invoke(ent);
-
-        return DB.SaveAsync(entities, Session, cancellation);
+        
+        return DB.SaveAsync(entities, session:Session, cancellation:cancellation);
     }
 
     /// <summary>

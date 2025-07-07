@@ -42,6 +42,16 @@ static class TypeMap {
         return configuration;
     }
 
+    internal static string DisplayEmbeddedTypes() {
+        var types = GetEmbeddedTypeConfigurationKeys().ToList();
+        return string.Join(", ", types);
+    }
+    
+    internal static string DisplayTypes() {
+        var types = GetTypeConfigurationKeys().ToList();
+        return string.Join(", ", types);
+    }
+
     internal static ICollection<Type> GetEmbeddedTypeConfigurationKeys()
         => _typeToEmbeddedCollectMap.Keys;
 

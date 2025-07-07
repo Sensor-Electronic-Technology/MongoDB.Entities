@@ -4,8 +4,7 @@ using MongoDB.Bson;
 namespace MongoDB.Entities;
 
 // ReSharper disable once InconsistentNaming
-public static partial class DB
-{
+public static partial class DB {
     /// <summary>
     /// Returns a DataStreamer object to enable uploading/downloading file data directly by supplying the ID of the file entity
     /// </summary>

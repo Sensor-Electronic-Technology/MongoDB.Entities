@@ -15,175 +15,6 @@ using NCalcExtensions;
 namespace MongoDB.Entities;
 
 public static partial class DB {
-#region ApplyMigrationInline
-
-    /*public static async Task ApplyMigrations<TEntity>(TEntity entity,
-                                                      Dictionary<string, object>? additionalData = null,
-                                                      CancellationToken cancellation = default)
-        where TEntity : IDocumentEntity {
-        var typeConfig = TypeConfiguration<TEntity>() ??
-                         await Find<DocumentTypeConfiguration>().Match(e => e.CollectionName == CollectionName<TEntity>())
-                                                                .ExecuteFirstAsync(cancellation);
-        var embeddedConfig = GetFromParent<TEntity>() ??
-                             await Find<EmbeddedTypeConfiguration>().Match(e => e.FieldDefinitions.ContainsKey(typeof(TEntity).Name))
-                                                                    .ExecuteFirstAsync(cancellation);
-
-        if (typeConfig == null && embeddedConfig == null) {
-            return;
-        }
-
-        if (typeConfig != null && typeConfig.Migrations.Any()) {
-            await EntityApplyDocMigration(entity, typeConfig, additionalData, cancellation);
-        }
-
-        if (embeddedConfig != null && embeddedConfig.EmbeddedMigrations.Any()) {
-            await EntityApplyEmbeddedMigration(entity, embeddedConfig, cancellation);
-        }
-    }
-
-    internal static async Task EntityApplyDocMigration<TEntity>(TEntity entity,
-                                                                DocumentTypeConfiguration typeConfig,
-                                                                Dictionary<string, object>? additionalData = null,
-                                                                CancellationToken cancellation = default)
-        where TEntity : IDocumentEntity {
-        var migrations = await typeConfig.Migrations
-                                         .ChildrenQueryable()
-                                         .ToListAsync(cancellationToken: cancellation);
-
-        if (migrations.Count <= 0) {
-            return;
-        }
-
-        if (entity.AdditionalData == null) {
-            entity.AdditionalData = [];
-        }
-
-        var doc = entity.AdditionalData;
-        var entityDoc = entity.ToBsonDocument();
-
-        foreach (var migration in migrations) {
-            foreach (var op in migration.UpOperations) {
-                if (op is AddFieldOperation addField) {
-                    await AddField(addField.Field, doc, entityDoc);
-                } else if (op is DropFieldOperation dropField) {
-                    doc.Remove(dropField.Field.FieldName);
-                } else if (op is AlterFieldOperation alterField) {
-                    doc.Remove(alterField.OldField.FieldName);
-                    await AddField(alterField.Field, doc, entityDoc);
-                }
-            }
-        }
-
-        if (additionalData != null) {
-            foreach (var fieldItem in additionalData) {
-                if (doc.Contains(fieldItem.Key)) {
-                    doc[fieldItem.Key] = BsonValue.Create(fieldItem.Value);
-                }
-            }
-        }
-    }
-
-    internal static async Task EntityApplyEmbeddedMigration<TEntity>(TEntity entity,
-                                                                     EmbeddedTypeConfiguration typeConfig,
-                                                                     CancellationToken cancellation = default)
-        where TEntity : IDocumentEntity {
-        var migrations = await typeConfig.EmbeddedMigrations.ChildrenQueryable()
-                                         .ToListAsync(cancellationToken: cancellation);
-
-        if (migrations.Count == 0) {
-            return;
-        }
-
-        var docEntity = entity.ToBsonDocument();
-
-        foreach (var migration in migrations) {
-            if (!typeConfig.FieldDefinitions.TryGetValue(migration.ParentTypeName, out var fieldDef)) {
-                Log(LogLevel.Error, "Failed to migrate EmbeddedMigration for {ParentCollect}", migration.ParentTypeName);
-                return;
-            }
-
-            foreach (var propertyName in fieldDef.PropertyNames) {
-                if (!docEntity.Contains(propertyName)) {
-                    Log(
-                        LogLevel.Warning,
-                        "Property {Property} is missing from Entity: {EntityId}",
-                        propertyName,
-                        docEntity["_id"]);
-                    continue;
-                }
-
-                if (fieldDef.IsArray) {
-                    var arr = docEntity.GetElement(propertyName).Value.AsBsonArray;
-                    if (arr.Count == 0 || arr.Contains("_csharpnull")) {
-                        continue;
-                    }
-
-                    foreach (var bVal in arr) {
-                        var doc = bVal.AsBsonDocument;
-                        await ApplyEmbeddedMigrationOperationsInline(doc, migration);
-                    }
-                } else {
-                    var doc = docEntity.GetElement(propertyName).Value.AsBsonDocument;
-                    if (doc == null || doc.Contains("_csharpnull")) {
-                        Log(
-                            LogLevel.Warning,
-                            "Embedded object {Doc} is null or empty, no migrations applied",
-                            propertyName);
-                        continue;
-                    }
-
-                    await ApplyEmbeddedMigrationOperationsInline(doc, migration);
-                    docEntity[propertyName] = doc;
-                }
-            }
-        }
-
-        /*var doc = entity.AdditionalData;
-        var entityDoc = entity.ToBsonDocument();
-
-        foreach (var migration in migrations) {
-            foreach (var op in migration.UpOperations) {
-                if (op is AddFieldOperation addField) {
-                    await AddField(addField.Field, doc, entityDoc);
-                } else if (op is DropFieldOperation dropField) {
-                    doc.Remove(dropField.Field.FieldName);
-                } else if (op is AlterFieldOperation alterField) {
-                    doc.Remove(alterField.OldField.FieldName);
-                    await AddField(alterField.Field, doc, entityDoc);
-                }
-            }
-        }
-
-        if (additionalData != null) {
-            foreach (var fieldItem in additionalData) {
-                if (doc.Contains(fieldItem.Key)) {
-                    doc[fieldItem.Key] = BsonValue.Create(fieldItem.Value);
-                }
-            }
-        }#1#
-    }
-
-    internal static async Task ApplyEmbeddedMigrationOperationsInline(BsonDocument embeddedDoc,
-                                                                      EmbeddedMigration migration) {
-        var addDataDoc = embeddedDoc.GetElement("AdditionalData").Value.ToBsonDocument();
-
-        if (addDataDoc.Contains("_csharpnull")) {
-            addDataDoc = [];
-        }
-
-        foreach (var op in migration.UpOperations) {
-            if (op is AddFieldOperation addField) {
-                await AddField(addField.Field, addDataDoc, embeddedDoc);
-            } else if (op is DropFieldOperation dropField) {
-                addDataDoc.Remove(dropField.Field.FieldName);
-            } else if (op is AlterFieldOperation alterField) {
-                await AddField(alterField.Field, addDataDoc, embeddedDoc);
-            }
-        }
-    }*/
-
-#endregion
-
 #region ApplyMigration
 
     public static async Task ApplyMigrations() {
@@ -328,8 +159,10 @@ public static partial class DB {
                     if (fieldDef.IsArray) {
                         var arr = entity.GetElement(propertyName).Value.AsBsonArray;
                         if (arr.Count == 0 || arr.Contains("_csharpnull")) {
-                            Log(LogLevel.Warning, "Array {Array} is null or empty," +
-                                                  "No migrations applied",
+                            Log(
+                                LogLevel.Warning,
+                                "Array {Array} is null or empty," +
+                                "No migrations applied",
                                 propertyName);
                             continue;
                         }
@@ -344,8 +177,10 @@ public static partial class DB {
                         var doc = entity.GetElement(propertyName).Value.AsBsonDocument;
 
                         if (doc == null || doc.Contains("_csharpnull")) {
-                            Log(LogLevel.Warning, "Embedded object {Doc} is null or empty," +
-                                                  "No migrations applied",
+                            Log(
+                                LogLevel.Warning,
+                                "Embedded object {Doc} is null or empty," +
+                                "No migrations applied",
                                 propertyName);
 
                             continue;
@@ -454,7 +289,7 @@ public static partial class DB {
                 var doc = entity.GetElement("AdditionalData").Value.ToBsonDocument();
 
                 if (doc.Contains("_csharpnull")) {
-                    doc = new BsonDocument();
+                    doc = [];
                 }
 
                 foreach (var op in migration.DownOperations) {
@@ -523,7 +358,6 @@ public static partial class DB {
     public static async Task RevertEmbeddedMigration(EmbeddedMigration migration) {
         if (migration.EmbeddedTypeConfiguration == null) {
             Log(LogLevel.Warning, "EmbeddedTypeConfiguration is null for migration {Migration} is null", migration.ID);
-
             return;
         }
 
@@ -531,7 +365,6 @@ public static partial class DB {
 
         if (!typeConfig.FieldDefinitions.TryGetValue(migration.ParentTypeName, out var fieldDef)) {
             Log(LogLevel.Error, "FieldDefinitions for ParentType {Parent} are missing", migration.ParentTypeName);
-
             return;
         }
 
@@ -565,7 +398,6 @@ public static partial class DB {
                                 LogLevel.Information,
                                 "Array {Array} is null or empty, no migrations reverted",
                                 propertyName);
-
                             continue;
                         }
 
@@ -577,14 +409,12 @@ public static partial class DB {
                         updated = true;
                     } else {
                         var doc = entity.GetElement(propertyName).Value.AsBsonDocument;
-
                         if (doc == null || doc.Contains("_csharpnull")) {
                             Log(
                                 LogLevel.Information,
                                 "Embedded object {Doc} is null or empty," +
                                 "No migrations reverted",
                                 propertyName);
-
                             continue;
                         }
 
@@ -650,28 +480,40 @@ public static partial class DB {
 #region FieldsAndOperations
 
     internal static async Task AddField(Field field, BsonDocument doc, BsonDocument entity) {
-        if (field is ObjectField oField) {
-            var objDoc = new BsonDocument();
-
-            foreach (var f in oField.Fields) {
-                await AddField(f, objDoc, entity);
-            }
-
-            doc[oField.FieldName] = objDoc;
-        } else if (field is ValueField vField) {
-            if (vField is CalculatedField calcField) {
-                var expression = await ProcessCalculationField(calcField, doc, entity);
-                if (calcField.IsBooleanExpression) {
-                    object result = ((bool)expression.Evaluate()) ? calcField.TrueValue : calcField.FalseValue;
-                    doc[calcField.FieldName] = BsonValue.Create(result);
-                } else {
-                    doc[calcField.FieldName] = BsonValue.Create(expression.Evaluate());
+        switch (field) {
+            case ObjectField oField: {
+                BsonDocument objDoc = !doc.Contains(oField.FieldName) ? new BsonDocument() : doc[oField.FieldName].AsBsonDocument;
+                foreach (var f in oField.Fields) {
+                    await AddField(f, objDoc, entity);
                 }
-            } else {
-                doc[vField.FieldName] = BsonValue.Create(vField.DefaultValue);
+
+                doc[oField.FieldName] = objDoc;
+                break;
             }
-        } else if (field is SelectionField sField) {
-            doc[sField.FieldName] = BsonValue.Create(sField.DefaultValue);
+            case ValueField vField: {
+                if (vField is CalculatedField calcField) {
+                    var expression = await ProcessCalculationField(calcField, doc, entity);
+                    if (calcField.IsBooleanExpression) {
+                        object result = ((bool)expression.Evaluate()) ? calcField.TrueValue : calcField.FalseValue;
+                        doc[calcField.FieldName] = BsonValue.Create(result);
+                    } else {
+                        doc[calcField.FieldName] = BsonValue.Create(expression.Evaluate());
+                    }
+                } else {
+                    if (!doc.Contains(vField.FieldName)) {
+                        doc[vField.FieldName] = BsonValue.Create(vField.DefaultValue);
+                    }
+                }
+
+                break;
+            }
+            case SelectionField sField: {
+                if (!doc.Contains(sField.FieldName)) {
+                    doc[sField.FieldName] = BsonValue.Create(sField.DefaultValue);
+                }
+
+                break;
+            }
         }
     }
 
@@ -905,7 +747,7 @@ public static partial class DB {
                                                                 EmbeddedFieldDefinitions fieldDef) {
         var addDataDoc = embeddedDoc.GetElement("AdditionalData").Value.ToBsonDocument();
 
-        if (addDataDoc==null || addDataDoc.Contains("_csharpnull")) {
+        if (addDataDoc == null || addDataDoc.Contains("_csharpnull")) {
             addDataDoc = [];
         }
 
@@ -925,9 +767,11 @@ public static partial class DB {
                     null) {
                     addDataDoc.Remove(alterField.OldField.FieldName);
                 }
+
                 await AddField(alterField.Field, addDataDoc, embeddedDoc);
             }
         }
+
         embeddedDoc["AdditionalData"] = addDataDoc;
     }
 

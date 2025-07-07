@@ -6,20 +6,18 @@ using MongoDB.Driver;
 namespace MongoDB.Entities;
 
 // ReSharper disable once InconsistentNaming
-public partial class DBContext
-{
+public partial class DBContext {
     /// <summary>
     /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
     /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
     /// </summary>
     /// <typeparam name="T">The type of entity</typeparam>
+    /// <param name="additionalData">Optional data for migrations</param>
     /// <param name="entity">The instance to persist</param>
     /// <param name="cancellation">And optional cancellation token</param>
-    public Task InsertAsync<T>(T entity, CancellationToken cancellation = default) where T : IEntity
-    {
+    public Task InsertAsync<T>(T entity, CancellationToken cancellation = default) where T : IEntity {
         SetModifiedBySingle(entity);
         OnBeforeSave<T>()?.Invoke(entity);
-
         return DB.InsertAsync(entity, Session, cancellation);
     }
 
@@ -28,10 +26,10 @@ public partial class DBContext
     /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
     /// </summary>
     /// <typeparam name="T">The type of entity</typeparam>
+    /// <param name="additionalData">Optional data for migrations</param>
     /// <param name="entities">The entities to persist</param>
     /// <param name="cancellation">And optional cancellation token</param>
-    public Task<BulkWriteResult<T>> InsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellation = default) where T : IEntity
-    {
+    public Task<BulkWriteResult<T>> InsertAsync<T>(IEnumerable<T> entities, CancellationToken cancellation = default) where T : IEntity {
         SetModifiedByMultiple(entities);
         foreach (var ent in entities)
             OnBeforeSave<T>()?.Invoke(ent);

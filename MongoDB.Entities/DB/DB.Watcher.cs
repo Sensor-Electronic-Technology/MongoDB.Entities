@@ -3,8 +3,7 @@
 namespace MongoDB.Entities;
 
 // ReSharper disable once InconsistentNaming
-public static partial class DB
-{
+public static partial class DB {
     /// <summary>
     /// Retrieves the 'change-stream' watcher instance for a given unique name.
     /// If an instance for the name does not exist, it will return a new instance.

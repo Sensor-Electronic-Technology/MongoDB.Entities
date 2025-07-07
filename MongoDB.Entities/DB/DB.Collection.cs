@@ -8,8 +8,7 @@ using MongoDB.Driver;
 namespace MongoDB.Entities;
 
 // ReSharper disable once InconsistentNaming
-public static partial class DB
-{
+public static partial class DB {
     internal static IMongoCollection<JoinRecord> GetRefCollection<T>(string name) where T : IEntity
         => Database<T>().GetCollection<JoinRecord>(name);
 
@@ -21,9 +20,9 @@ public static partial class DB
     public static IMongoCollection<T> Collection<T>() where T : IEntity
         => Cache<T>.Collection;
 
-    public static IMongoCollection<BsonDocument> Collection(string db,string collectName) 
+    public static IMongoCollection<BsonDocument> Collection(string db, string collectName)
         => Database(db).GetCollection<BsonDocument>(collectName);
-    
+
     /// <summary>
     /// Gets the collection name for a given entity type
     /// </summary>
@@ -40,8 +39,7 @@ public static partial class DB
     /// <param name="session">An optional session if using within a transaction</param>
     public static Task CreateCollectionAsync<T>(Action<CreateCollectionOptions<T>> options,
                                                 CancellationToken cancellation = default,
-                                                IClientSessionHandle? session = null) where T : IEntity
-    {
+                                                IClientSessionHandle? session = null) where T : IEntity {
         var opts = new CreateCollectionOptions<T>();
         options(opts);
 
@@ -56,21 +54,18 @@ public static partial class DB
     /// </summary>
     /// <typeparam name="T">The entity type to drop the collection of</typeparam>
     /// <param name="session">An optional session if using within a transaction</param>
-    public static async Task DropCollectionAsync<T>(IClientSessionHandle? session = null) where T : IEntity
-    {
+    public static async Task DropCollectionAsync<T>(IClientSessionHandle? session = null) where T : IEntity {
         var tasks = new List<Task>();
         var db = Database<T>();
         var collName = CollectionName<T>();
-        var options = new ListCollectionNamesOptions
-        {
+        var options = new ListCollectionNamesOptions {
             Filter = "{$and:[{name:/~/},{name:/" + collName + "/}]}"
         };
 
         // ReSharper disable once MethodHasAsyncOverload
         var list = await db.ListCollectionNames(options).ToListAsync().ConfigureAwait(false);
 
-        for (var i = 0; i < list.Count; i++)
-        {
+        for (var i = 0; i < list.Count; i++) {
             var cName = list[i];
             tasks.Add(
                 session == null
@@ -84,6 +79,7 @@ public static partial class DB
                 : db.DropCollectionAsync(session, collName));
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
+
         //Remake watcher after collection drop
         if (typeof(T) == typeof(DocumentTypeConfiguration)) {
             Cache<T>.Watchers.Clear();

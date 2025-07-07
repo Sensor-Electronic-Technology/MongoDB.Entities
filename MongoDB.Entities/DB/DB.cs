@@ -341,6 +341,12 @@ public static partial class DB {
     public static void AddUpdateEmbeddedTypeConfiguration(Type type, EmbeddedTypeConfiguration? typeConfig)
         => TypeMap.AddUpdateEmbeddedTypeConfiguration(type, typeConfig);
 
+    public static string DisplayEmbeddedTypes()
+        => TypeMap.DisplayEmbeddedTypes();
+    
+    public static string DisplayTypes()
+        =>TypeMap.DisplayTypes();
+
     /// <summary>
     /// Switches the default database at runtime
     /// <para>WARNING: Use at your own risk!!! Might result in entities getting saved in the wrong databases under high concurrency situations.</para>

@@ -9,24 +9,10 @@ namespace MongoDB.Entities;
 
 public static partial class Extensions {
     /// <summary>
-    /// Applies a migration to a entity of type IDocumentEntity.  
-    /// </summary>
-    /// <param name="entity">An entity of type IDocumentEntity</param>
-    /// <param name="additionalData">Optional dictionary data to fill data after migration</param>
-    /// <param name="cancellation">An optional cancellation token</param>
-    /*public static async Task ApplyMigration<T>(this T entity, Dictionary<string, object>? additionalData = null,
-                                               CancellationToken cancellation = default)
-        where T : IDocumentEntity {
-        if (entity is IDocumentEntity ent) {
-             await DB.ApplyMigrations(ent, additionalData, cancellation);
-        }
-    }*/
-    
-    /// <summary>
     /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
     /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
     /// </summary>
-    /// <param name="entity"></param>
+    /// <param name="entity">Entity of type IEntity</param>
     /// <param name="session">An optional session if using within a transaction</param>
     /// <param name="cancellation">An optional cancellation token</param>
     public static Task SaveAsync<T>(this T entity,
@@ -34,18 +20,11 @@ public static partial class Extensions {
                                     CancellationToken cancellation = default) where T : IEntity
         => DB.SaveAsync(entity, session, cancellation);
 
-    /// <summary>
-    /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
-    /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
-    /// </summary>
-    /// <param name="entity"></param>
-    /// <param name="session">An optional session if using within a transaction</param>
-    /// <param name="cancellation">An optional cancellation token</param>
-    /*public static Task SaveMigrateAsync<T>(this T entity,
+    public static Task SaveMigrateAsync<T>(this T entity,
                                            Dictionary<string, object>? additionalData = null,
                                            IClientSessionHandle? session = null,
                                            CancellationToken cancellation = default) where T : IDocumentEntity
-        => DB.SaveMigrateAsync(entity, additionalData, session, cancellation);*/
+        => DB.SaveMigrateAsync(entity, additionalData, session, cancellation);
 
     /// <summary>
     /// Saves a batch of complete entities replacing existing ones or creating new ones if they do not exist.
@@ -59,6 +38,13 @@ public static partial class Extensions {
                                                         CancellationToken cancellation = default)
         where T : IEntity
         => DB.SaveAsync(entities, session, cancellation);
+
+    public static Task<BulkWriteResult<T>> SaveMigrateAsync<T>(this IEnumerable<T> entities,
+                                                               List<Dictionary<string, object>>? additionalData = null,
+                                                               IClientSessionHandle? session = null,
+                                                               CancellationToken cancellation = default)
+        where T : IDocumentEntity
+        => DB.SaveMigrateAsync(entities,additionalData,session, cancellation);
 
     /// <summary>
     /// Saves an entity partially with only the specified subset of properties.
