@@ -16,7 +16,7 @@ public class Fields {
         await DB.DropCollectionAsync<QuickTest>();
         await DB.DropCollectionAsync<XrdData>();
         await DB.DropCollectionAsync<DocumentMigration>();
-        await DB.DropCollectionAsync<TypeConfiguration>();
+        await DB.DropCollectionAsync<DocumentTypeConfiguration>();
         await DataHelper.GenerateEpiData();
         var migrationNumber = await DB.Collection<DocumentMigration>()
                                       .Find(_ => true)
@@ -120,7 +120,7 @@ public class Fields {
             ]
         };
         builder.AddField(objField);
-        var typeConfig = TypeConfiguration.CreateOnline<QuickTest>();
+        var typeConfig = DocumentTypeConfiguration.CreateOnline<QuickTest>();
         Assert.IsNotNull(typeConfig);
         await typeConfig.SaveAsync();
         var migration = builder.Build(typeConfig, migrationNumber);
@@ -133,7 +133,7 @@ public class Fields {
         await Task.Delay(500);
         var internalTypeConfig = DB.TypeConfiguration<QuickTest>();
         Assert.IsNotNull(internalTypeConfig);
-        var typeConfig=await DB.Collection<TypeConfiguration>().Find(e=>e.ID==internalTypeConfig.ID).FirstOrDefaultAsync();
+        var typeConfig=await DB.Collection<DocumentTypeConfiguration>().Find(e=>e.ID==internalTypeConfig.ID).FirstOrDefaultAsync();
         Assert.IsNotNull(typeConfig);
         Assert.IsNotEmpty(typeConfig.Migrations);
         
@@ -223,6 +223,6 @@ public class Fields {
         await DB.DropCollectionAsync<QuickTest>();
         await DB.DropCollectionAsync<XrdData>();
         await DB.DropCollectionAsync<DocumentMigration>();
-        await DB.DropCollectionAsync<TypeConfiguration>();
+        await DB.DropCollectionAsync<DocumentTypeConfiguration>();
     }
 }

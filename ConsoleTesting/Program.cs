@@ -1,36 +1,194 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Collections;
+using System.Text.Json;
 using ConsoleTesting;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MongoDB.Entities;
 
+//await DB.RevertMigration(2);
+
+//await BuildMigrationNew();
+//await DB.ApplyMigrations();
+//await BuildEmbeddedMigration();
+//await DB.ApplyMigrations();
+
+//await TestAddNewWithCustomFieldData();
+//await TestUpdateWithMigration();
+//await qt.ApplyMigrations();
+
 Console.WriteLine("Initializing Database...");
+await DB.InitAsync(
+    "mongodb-test-epidata",
+    "172.20.3.41",
+    enableLogging: true,
+    assemblies: [typeof(EpiRun).Assembly]);
 
 
-/*TestCreated test = new TestCreated();
-test.WaferId = "W01-5432-006";
-await test.SaveAsync();
+await GenerateDataAndMigrations();
+Console.WriteLine("Press any key to add new data");
+Console.ReadLine();
+await AddNewRunWithQtData("B15-9661-35");
+await AddNewRunWithQtData("B16-9661-35");
+await AddNewRunWithQtData("B17-9661-35");
 
-List<TestMany> manys = [];
 
-for (int i = 1; i < 10; i++) {
-    manys.Add(
-        new TestMany() {
-            SomeId = $"W{i}",
-            TestCreated = test.ToReference()
-        });
+async Task GenerateDataAndMigrations() {
+    await GenerateEpiData();
+    await BuildMigration();
+    await DB.ApplyMigrations();
+
+    /*Console.WriteLine("Press any key to build and apply embedded migration");
+    Console.ReadLine();*/
+    await BuildEmbeddedMigration();
+    await BuildEmbeddedMigration2();
+    await DB.ApplyMigrations();
 }
-await manys.SaveAsync();
-await test.TestManys.AddAsync(manys);
-Console.WriteLine("Check database");*/
 
-/*var test2 = await DB.Find<TestCreated>().Match(e => e.WaferId == "W01-5432-005").ExecuteSingleAsync();
-await test2.SaveAsync();*/
+async Task AddNewRunWithQtData(string waferId) {
+    var rand = new Random();
+    var now = DateTime.Now;
 
-await TestOneToMany();
+    
+    EpiRun run = new EpiRun {
+        WaferId = waferId,
+        RunNumber = waferId[4..8],
+        PocketNumber = waferId[9..10],
+        RunTypeId = "Prod",
+        SystemId = waferId[..2],
+    };
+
+    var quickTestData = new QuickTest {
+        WaferId = run.WaferId,
+        TimeStamp = now,
+        InitialMeasurements = new List<QtMeasurement> {
+            GenerateQtMeasurement(rand, "A", now),
+            GenerateQtMeasurement(rand, "B", now),
+            GenerateQtMeasurement(rand, "C", now),
+            GenerateQtMeasurement(rand, "L", now),
+            GenerateQtMeasurement(rand, "R", now),
+            GenerateQtMeasurement(rand, "T", now),
+            GenerateQtMeasurement(rand, "G", now)
+        },
+        FinalMeasurements = new List<QtMeasurement> {
+            GenerateQtMeasurement(rand, "A", now),
+            GenerateQtMeasurement(rand, "B", now),
+            GenerateQtMeasurement(rand, "C", now),
+            GenerateQtMeasurement(rand, "L", now),
+            GenerateQtMeasurement(rand, "R", now),
+            GenerateQtMeasurement(rand, "T", now),
+            GenerateQtMeasurement(rand, "G", now)
+        }
+    };
+
+    List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    data.Add(new Dictionary<string, object>() {
+        {"WPE",22},{"Wavelength2",284},{"Voltage2",43}
+    });
+    await quickTestData.InitialMeasurements.ApplyEmbedded(typeof(QuickTest),data);
+    await quickTestData.FinalMeasurements.ApplyEmbedded(typeof(QuickTest),data);
+
+    await run.SaveAsync();
+    //await quickTestData.ApplyMigrations();
+    await quickTestData.SaveMigrateAsync();
+    
+    run.QuickTest = quickTestData.ToReference();
+    quickTestData.EpiRun = run.ToReference();
+    await run.SaveAsync();
+    await quickTestData.SaveAsync();
+}
+
+
+async Task TestUpdateWithMigration() {
+    var rand = new Random();
+    var now = DateTime.Now;
+    var run = await DB.Find<EpiRun>().Match(e => e.WaferId == "B09-9998-97").ExecuteSingleAsync();
+
+    if (run == null) {
+        Console.WriteLine("Run not found");
+        return;
+    }
+
+    var qt = await run.QuickTest.ToEntityAsync();
+    qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "E", now));
+    qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "Q", now));
+    qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "J", now));
+    qt.InitialMeasurements.Add(GenerateQtMeasurement(rand, "K", now));
+
+    await qt.SaveAsync();
+    //await qt.SaveAsync();
+    Console.WriteLine("Completed, Check Database");
+}
+
+async Task TestAddNewWithCustomFieldData() {
+    var rand = new Random();
+    var now = DateTime.Now;
+    EpiRun run = new EpiRun {
+        WaferId = "B09-9998-97",
+        RunNumber = "9998",
+        PocketNumber = "97",
+        RunTypeId = "Prod",
+        SystemId = "B09",
+    };
+
+    var quickTestData = new QuickTest {
+        WaferId = run.WaferId,
+        TimeStamp = now,
+        InitialMeasurements = new List<QtMeasurement> {
+            GenerateQtMeasurement(rand, "A", now),
+            GenerateQtMeasurement(rand, "B", now),
+            GenerateQtMeasurement(rand, "C", now),
+            GenerateQtMeasurement(rand, "L", now),
+            GenerateQtMeasurement(rand, "R", now),
+            GenerateQtMeasurement(rand, "T", now),
+            GenerateQtMeasurement(rand, "G", now)
+        },
+        FinalMeasurements = new List<QtMeasurement> {
+            GenerateQtMeasurement(rand, "A", now),
+            GenerateQtMeasurement(rand, "B", now),
+            GenerateQtMeasurement(rand, "C", now),
+            GenerateQtMeasurement(rand, "L", now),
+            GenerateQtMeasurement(rand, "R", now),
+            GenerateQtMeasurement(rand, "T", now),
+            GenerateQtMeasurement(rand, "G", now)
+        }
+    };
+    var collectionName = DB.CollectionName<QuickTest>();
+    /*var typeConfig = await DB.Collection<DocumentTypeConfiguration>()
+                             .Find(e => e.CollectionName == collectionName)
+                             .FirstOrDefaultAsync();*/
+
+    await run.SaveAsync();
+    await quickTestData.SaveAsync();
+
+    run.QuickTest = quickTestData.ToReference();
+    quickTestData.EpiRun = run.ToReference();
+    await run.SaveAsync();
+    await quickTestData.SaveAsync();
+}
 
 async Task TestOneToMany() {
     await DB.InitAsync("test_one_to_many", "172.20.3.41");
@@ -105,7 +263,172 @@ async Task DropAllCollections() {
     await DB.DropCollectionAsync<QuickTest>();
     await DB.DropCollectionAsync<XrdData>();
     await DB.DropCollectionAsync<DocumentMigration>();
-    await DB.DropCollectionAsync<TypeConfiguration>();
+    await DB.DropCollectionAsync<DocumentTypeConfiguration>();
+}
+
+async Task BuildEmbeddedMigrationNotArray() {
+    var migrationNumber = await DB.Collection<DocumentMigration>()
+                                  .Find(_ => true)
+                                  .SortByDescending(e => e.MigrationNumber)
+                                  .Project(e => e.MigrationNumber)
+                                  .FirstOrDefaultAsync();
+    Console.WriteLine("Migration Number: " + migrationNumber);
+
+    MigrationBuilder builder = new MigrationBuilder();
+    ValueField valueField = new ValueField() {
+        FieldName = "AField",
+        TypeCode = TypeCode.String,
+        BsonType = BsonType.String,
+        DataType = DataType.STRING,
+        DefaultValue = "DefaultValue"
+    };
+    builder.AddField(valueField);
+    EmbeddedTypeConfiguration? typeConfig =
+        await EmbeddedTypeConfiguration.CreateOnline<EpiRun, TestEmbeddedNotArray>(["TestEmbeddedNotArray"]);
+    if (typeConfig == null) {
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnline failed!");
+        return;
+    }
+
+    await typeConfig.SaveAsync();
+    var migration = builder.Build(typeConfig, migrationNumber, typeof(EpiRun).AssemblyQualifiedName ?? string.Empty);
+    await migration.SaveAsync();
+
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
+    await typeConfig.EmbeddedMigrations.AddAsync(migration);
+    await migration.SaveAsync();
+    Console.WriteLine("Migration Created");
+}
+
+async Task BuildEmbeddedMigration() {
+    var migrationNumber = await DB.Collection<DocumentMigration>()
+                                  .Find(_ => true)
+                                  .SortByDescending(e => e.MigrationNumber)
+                                  .Project(e => e.MigrationNumber)
+                                  .FirstOrDefaultAsync();
+    Console.WriteLine("Migration Number: " + migrationNumber);
+
+    MigrationBuilder builder = new MigrationBuilder();
+    ValueField valueField = new ValueField() {
+        FieldName = "Wavelength2",
+        TypeCode = TypeCode.Double,
+        BsonType = BsonType.Double,
+        DataType = DataType.NUMBER,
+        DefaultValue = 0.00
+    };
+
+    ValueField valueField2 = new ValueField() {
+        FieldName = "Voltage2",
+        TypeCode = TypeCode.Double,
+        BsonType = BsonType.Double,
+        DataType = DataType.NUMBER,
+        DefaultValue = 0.00
+    };
+    builder.AddField(valueField);
+    builder.AddField(valueField2);
+    EmbeddedTypeConfiguration? typeConfig =
+        await EmbeddedTypeConfiguration.CreateOnline<QuickTest, QtMeasurement>(
+            ["InitialMeasurements", "FinalMeasurements"],
+            true);
+
+    if (typeConfig == null) {
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnly failed!");
+        return;
+    }
+
+    await typeConfig.SaveAsync();
+    var migration = builder.Build(typeConfig, migrationNumber, nameof(QuickTest) ?? string.Empty);
+    await migration.SaveAsync();
+
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
+    await typeConfig.EmbeddedMigrations.AddAsync(migration);
+    await migration.SaveAsync();
+    Console.WriteLine("Migration Created");
+}
+
+async Task BuildEmbeddedMigration2() {
+    var migrationNumber = await DB.Collection<DocumentMigration>()
+                                  .Find(_ => true)
+                                  .SortByDescending(e => e.MigrationNumber)
+                                  .Project(e => e.MigrationNumber)
+                                  .FirstOrDefaultAsync();
+    Console.WriteLine("Migration Number: " + migrationNumber);
+
+    MigrationBuilder builder = new MigrationBuilder();
+    ValueField valueField = new ValueField() {
+        FieldName = "WPE",
+        TypeCode = TypeCode.Double,
+        BsonType = BsonType.Double,
+        DataType = DataType.NUMBER,
+        DefaultValue = 0.00
+    };
+    builder.AddField(valueField);
+    EmbeddedTypeConfiguration? typeConfig =
+        await EmbeddedTypeConfiguration.CreateOnline<QuickTest, QtMeasurement>(
+            ["InitialMeasurements", "FinalMeasurements"],
+            true);
+
+    if (typeConfig == null) {
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnline failed!");
+        return;
+    }
+
+    await typeConfig.SaveAsync();
+    var migration = builder.Build(typeConfig, migrationNumber, nameof(QuickTest) ?? string.Empty);
+    await migration.SaveAsync();
+
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
+    await typeConfig.EmbeddedMigrations.AddAsync(migration);
+    await migration.SaveAsync();
+    Console.WriteLine("Migration Created");
+}
+
+async Task BuildMigrationNew() {
+    var migrationNumber = await DB.Collection<DocumentMigration>()
+                                  .Find(_ => true)
+                                  .SortByDescending(e => e.MigrationNumber)
+                                  .Project(e => e.MigrationNumber)
+                                  .FirstOrDefaultAsync();
+    Console.WriteLine("Migration Number: " + migrationNumber);
+    MigrationBuilder builder = new MigrationBuilder();
+    ObjectField objField = new ObjectField() {
+        FieldName = "Qt Summary",
+        BsonType = BsonType.Document,
+        TypeCode = TypeCode.Object,
+        Fields = [
+            new ValueField() {
+                FieldName = "Power2",
+                BsonType = BsonType.Double,
+                TypeCode = TypeCode.Double,
+                DataType = DataType.NUMBER,
+                DefaultValue = 0.00
+            },
+            new ValueField() {
+                FieldName = "Voltage2",
+                BsonType = BsonType.Double,
+                TypeCode = TypeCode.Double,
+                DataType = DataType.NUMBER,
+                DefaultValue = 0.00
+            }
+        ]
+    };
+    builder.AddField(objField);
+    DocumentTypeConfiguration? typeConfig = DocumentTypeConfiguration.CreateOnline<QuickTest>();
+
+    if (typeConfig == null) {
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnly failed!");
+
+        return;
+    }
+
+    await typeConfig.SaveAsync();
+    var migration = builder.Build(typeConfig, migrationNumber);
+    await migration.SaveAsync();
+
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
+    await typeConfig.Migrations.AddAsync(migration);
+    await migration.SaveAsync();
+    Console.WriteLine("Migration Created");
 }
 
 async Task BuildMigration() {
@@ -209,18 +532,19 @@ async Task BuildMigration() {
         ]
     };
     builder.AddField(objField);
-    TypeConfiguration? typeConfig = TypeConfiguration.CreateOnline<QuickTest>();
+    DocumentTypeConfiguration? typeConfig = DocumentTypeConfiguration.CreateOnline<QuickTest>();
 
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration.CreateOnly failed!");
+        Console.WriteLine("DocumentTypeConfiguration.CreateOnly failed!");
 
         return;
     }
+
     await typeConfig.SaveAsync();
     var migration = builder.Build(typeConfig, migrationNumber);
     await migration.SaveAsync();
 
-    //migration.TypeConfiguration = typeConfig.ToReference();
+    //migration.DocumentTypeConfiguration = documentTypeConfig.ToReference();
     await typeConfig.Migrations.AddAsync(migration);
     await migration.SaveAsync();
     Console.WriteLine("Migration Created");
@@ -233,15 +557,16 @@ async Task BuildMigration2() {
                                   .Project(e => e.MigrationNumber)
                                   .FirstOrDefaultAsync();
     var collectionName = DB.CollectionName<QuickTest>();
-    var typeConfig = await DB.Collection<TypeConfiguration>()
+    var typeConfig = await DB.Collection<DocumentTypeConfiguration>()
                              .Find(e => e.CollectionName == collectionName)
                              .FirstOrDefaultAsync();
 
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration not found");
+        Console.WriteLine("DocumentTypeConfiguration not found");
 
         return;
     }
+
     var field = typeConfig.Fields.FirstOrDefault(e => e.FieldName == "Qt Summary");
 
     if (field == null) {
@@ -249,6 +574,7 @@ async Task BuildMigration2() {
 
         return;
     }
+
     var updatedField = FastCloner.FastCloner.DeepClone(field as ObjectField);
     var filter = new Filter {
         FieldName = nameof(QtMeasurement.Power),
@@ -313,12 +639,12 @@ async Task BuilderMigration3() {
                                   .Project(e => e.MigrationNumber)
                                   .FirstOrDefaultAsync();
     var collectionName = DB.CollectionName<QuickTest>();
-    var typeConfig = await DB.Collection<TypeConfiguration>()
+    var typeConfig = await DB.Collection<DocumentTypeConfiguration>()
                              .Find(e => e.CollectionName == collectionName)
                              .FirstOrDefaultAsync();
 
     if (typeConfig == null) {
-        Console.WriteLine("TypeConfiguration not found");
+        Console.WriteLine("DocumentTypeConfiguration not found");
 
         return;
     }
@@ -445,8 +771,13 @@ async Task MigrateOnInsert() {
     await quickTestData.SaveAsync();
     run.QuickTest = quickTestData.ToReference();
     quickTestData.EpiRun = run.ToReference();
-    await run.SaveMigrateAsync();
-    await quickTestData.SaveMigrateAsync();
+    /*await run.ApplyMigrations();
+    await quickTestData.ApplyMigrations();*/
+    /*await run.SaveMigrateAsync();
+    await quickTestData.SaveMigrateAsync();*/
+    await run.SaveAsync();
+    await quickTestData.SaveAsync();
+    
 }
 
 async Task UndoMigration(int number = 2) {
@@ -643,7 +974,7 @@ async Task GenerateEpiData() {
     List<QuickTest> quickTests = [];
     List<XrdData> xrdMeasurementData = [];
 
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 1; i <= 5; i++) {
         for (int x = 1; x <= 10; x++) {
             EpiRun run = new EpiRun {
                 RunTypeId = (rand.NextDouble() > .5) ? "Prod" : "Rnd",
@@ -674,6 +1005,7 @@ async Task GenerateEpiData() {
                 ledId_P += $"-0{x}";
                 run.PocketNumber = $"0{x}";
             }
+
             run.WaferId = ledId_P;
             epiRuns.Add(run);
             /*await run.SaveAsync();*/
@@ -717,25 +1049,25 @@ async Task GenerateEpiData() {
             await run.XrdMeasurements.AddAsync(xrdMeasurements);*/
         } //end pocked for loop
     }     //end run number for loop
+
     await epiRuns.SaveAsync();
     await quickTests.SaveAsync();
     await xrdMeasurementData.SaveAsync();
 
-    epiRuns.ForEach(
-        run => {
-            var qt = quickTests.FirstOrDefault(e => e.WaferId == run.WaferId);
-            var xrd = xrdMeasurementData.FirstOrDefault(e => e.WaferId == run.WaferId);
+    epiRuns.ForEach(run => {
+        var qt = quickTests.FirstOrDefault(e => e.WaferId == run.WaferId);
+        var xrd = xrdMeasurementData.FirstOrDefault(e => e.WaferId == run.WaferId);
 
-            if (qt != null) {
-                run.QuickTest = qt.ToReference();
-                qt.EpiRun = run.ToReference();
-            }
+        if (qt != null) {
+            run.QuickTest = qt.ToReference();
+            qt.EpiRun = run.ToReference();
+        }
 
-            if (xrd != null) {
-                run.XrdData = xrd.ToReference();
-                xrd.EpiRun = run.ToReference();
-            }
-        });
+        if (xrd != null) {
+            run.XrdData = xrd.ToReference();
+            xrd.EpiRun = run.ToReference();
+        }
+    });
 
     await epiRuns.SaveAsync();
     await quickTests.SaveAsync();
@@ -898,7 +1230,7 @@ async Task TestTypeConfigAvailableProperties() {
             }
         ]
     };
-    var typeConfig = TypeConfiguration.CreateOnline<EpiRun>();
+    var typeConfig = DocumentTypeConfiguration.CreateOnline<EpiRun>();
 
     if (typeConfig != null) {
         typeConfig.Fields.Add(objField);
@@ -906,7 +1238,7 @@ async Task TestTypeConfigAvailableProperties() {
         await typeConfig.SaveAsync();
         Console.WriteLine("Check database");
     } else {
-        Console.WriteLine("Error TypeConfiguration.Create failed");
+        Console.WriteLine("Error DocumentTypeConfiguration.Create failed");
     }
 }
 
@@ -951,4 +1283,9 @@ public class Book : Entity {
 
 public class AuthorWithBooks : Author {
     public Book[] AllBooks { get; set; }
+}
+
+public class TestObject {
+    public int Value1 { get; set; }
+    public int Value2 { get; set; }
 }

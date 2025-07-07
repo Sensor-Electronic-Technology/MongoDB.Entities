@@ -1,10 +1,10 @@
-﻿using MongoDB.Driver;
+﻿using System.Collections.Generic;
+using MongoDB.Driver;
 
 namespace MongoDB.Entities;
 
 // ReSharper disable once InconsistentNaming
-public static partial class DB
-{
+public static partial class DB {
     /// <summary>
     /// Represents an update command
     /// <para>TIP: Specify a filter first with the .Match() method. Then set property values with .Modify() and finally call .Execute() to run the command.</para>
@@ -13,7 +13,7 @@ public static partial class DB
     /// <param name="session">An optional session if using within a transaction</param>
     public static Update<T> Update<T>(IClientSessionHandle? session = null) where T : IEntity
         => new(session, null, null);
-    
+
     /// <summary>
     /// Update and retrieve the first document that was updated.
     /// <para>TIP: Specify a filter first with the .Match(). Then set property values with .Modify() and finally call .Execute() to run the command.</para>
@@ -21,7 +21,8 @@ public static partial class DB
     /// <typeparam name="T">Any class that implements IEntity</typeparam>
     /// <typeparam name="TProjection">The type to project to</typeparam>
     /// <param name="session">An optional session if using within a transaction</param>
-    public static UpdateAndGet<T, TProjection> UpdateAndGet<T, TProjection>(IClientSessionHandle? session = null) where T : IEntity
+    public static UpdateAndGet<T, TProjection> UpdateAndGet<T, TProjection>(IClientSessionHandle? session = null)
+        where T : IEntity
         => new(session, null, null);
 
     /// <summary>

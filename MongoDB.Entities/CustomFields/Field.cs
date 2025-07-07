@@ -9,7 +9,7 @@ namespace MongoDB.Entities;
 
 
 /// <summary>
-/// For the AvailableProperties property in <see cref="TypeConfiguration"/>
+/// For the AvailableProperties property in <see cref="DocumentTypeConfiguration"/>
 /// Useful for the UI layer when displaying custom fields in a table
 /// </summary>
 [BsonDiscriminator(RootClass = true), 
@@ -43,6 +43,9 @@ public class Field:IEquatable<Field> {
         return new KeyValuePair<string, FieldInfo>(FieldName, new() { TypeCode = TypeCode });
     }
 
+    public virtual KeyValuePair<string, object?> GetValueDictionary()
+        => throw new NotImplementedException("Cannot get value dictionary of type Field");
+
     public bool Equals(Field? other) {
         if (other is null)
             return false;
@@ -63,10 +66,15 @@ public class Field:IEquatable<Field> {
 public class ObjectField : Field {
    public List<Field> Fields { get; set; } = [];
 
-   public override KeyValuePair<string, FieldInfo> ToFieldInfo() {
-       return ProcessField();
-   }
+   public override KeyValuePair<string, FieldInfo> ToFieldInfo()
+       => ProcessField();
 
+   public override KeyValuePair<string, object?> GetValueDictionary() {
+       var obj = Fields.Select(subField => subField.GetValueDictionary())
+                                               .ToDictionary(pair => pair.Key, pair => pair.Value);
+       return new(FieldName, obj);
+   }
+   
    private KeyValuePair<string, FieldInfo> ProcessField() {
        ObjectFieldInfo objInfo = new ObjectFieldInfo {
            TypeCode = TypeCode,
@@ -85,16 +93,22 @@ public class ValueField : Field {
     public object? DefaultValue { get; set; }
     public string? UnitName { get; set; } = string.Empty;
     public string? QuantityName { get; set; } = string.Empty;
+    public override KeyValuePair<string, object?> GetValueDictionary() {
+        return new(this.FieldName, this.DefaultValue);
+    }
 }
 
 public class SelectionField : Field {
     public DataType DataType { get; set; }
     public Dictionary<string,object> SelectionDictionary { get; set; } = new();
+
+    public override KeyValuePair<string, object?> GetValueDictionary() {
+        return new(this.FieldName, this.DefaultValue);
+    }
     public object? DefaultValue { get; set; }
 }
 
 public partial class CalculatedField:ValueField  {
-    //Regex.Matches(expression, @"\[(.*?)\]", RegexOptions.Compiled);
     public string Expression { get; set; } = string.Empty;
     public List<Variable> Variables { get; set; } = [];
     public bool IsBooleanExpression { get; set; } = false;
@@ -102,9 +116,9 @@ public partial class CalculatedField:ValueField  {
     public object FalseValue { get; set; } = false;
     
     [GeneratedRegex(@"\[(.*?)\]")]
-    private static partial Regex MyRegex();
+    private static partial Regex DotRegex();
     public bool IsValid() {
-         var regex = MyRegex();
+         var regex = DotRegex();
          var matches=regex.Matches(Expression);
 
          if (matches.Count!=Variables.Count) {

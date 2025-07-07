@@ -35,8 +35,29 @@ public class MigrationBuilder {
         return new(operation);
     }
 
-    public virtual DocumentMigration Build(TypeConfiguration typeConfig,int migrationNumber) {
+    public virtual DocumentMigration Build(DocumentTypeConfiguration documentTypeConfig,int migrationNumber) {
         DocumentMigration migration = new DocumentMigration {
+            MigratedOn = DateTime.MinValue.ToUniversalTime(),
+            IsMigrated = false,
+            MigrationNumber = 0,
+        };
+        migration.Build(this);
+        bool major=migration.UpOperations.OfType<AddFieldOperation>().Any();
+        major= major || migration.UpOperations.OfType<DropFieldOperation>().Any();
+        if (major) {
+            migration.Version=documentTypeConfig.DocumentVersion.IncrementMajor();
+            migration.IsMajorVersion = true;
+        } else {
+            migration.Version=documentTypeConfig.DocumentVersion.Increment();
+            migration.IsMajorVersion=migration.Version.Major>documentTypeConfig.DocumentVersion.Major;
+        }
+        migration.TypeConfiguration = documentTypeConfig.ToReference();
+        migration.MigrationNumber = ++migrationNumber;
+        return migration;
+    }
+    
+    public virtual EmbeddedMigration Build(EmbeddedTypeConfiguration typeConfig,int migrationNumber,string parentTypeName) {
+        EmbeddedMigration migration = new EmbeddedMigration() {
             MigratedOn = DateTime.MinValue.ToUniversalTime(),
             IsMigrated = false,
             MigrationNumber = 0,
@@ -51,8 +72,9 @@ public class MigrationBuilder {
             migration.Version=typeConfig.DocumentVersion.Increment();
             migration.IsMajorVersion=migration.Version.Major>typeConfig.DocumentVersion.Major;
         }
-        migration.TypeConfiguration = typeConfig.ToReference();
+        migration.EmbeddedTypeConfiguration = typeConfig.ToReference();
         migration.MigrationNumber = ++migrationNumber;
+        migration.ParentTypeName = parentTypeName;
         return migration;
     }
 }

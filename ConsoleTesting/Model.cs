@@ -18,6 +18,15 @@ public class TemplateRun : IDocumentEntity, ICreatedOn, IModifiedOn {
     public DocumentVersion Version { get; set; }
     public DateTime CreatedOn { get; set; }
     public DateTime ModifiedOn { get; set; }
+    
+    public void UpdateEmbedded(IDocumentEntity entity) { }
+}
+
+public class TestEmbeddedNotArray : IEmbeddedEntity {
+    public string? Name { get; set; }
+    public BsonDocument? AdditionalData { get; set; }
+    public async Task Migrate(Type parent)
+        => throw new NotImplementedException();
 }
 
 [Collection("epi_runs")]
@@ -29,6 +38,7 @@ public class EpiRun : DocumentEntity,ICreatedOn,IModifiedOn {
     public string TechnicianId { get; set; }
     public string RunNumber { get; set; }
     public string PocketNumber { get; set; }
+    public TestEmbeddedNotArray? TestEmbeddedNotArray { get; set; }
     public Many<Monitoring,EpiRun> EpiRunMonitoring { get; set; }
     public One<QuickTest> QuickTest { get; set; }
     public One<XrdData> XrdData { get; set; }
@@ -65,15 +75,13 @@ public class EpiRun : DocumentEntity,ICreatedOn,IModifiedOn {
 }
 
 [Collection("quick_tests")]
-public class QuickTest:DocumentEntity,ICreatedOn,IModifiedOn {
+public class QuickTest:DocumentEntity,ICreatedOn,IModifiedOn,IHasEmbedded {
     public string WaferId { get; set; }
     public DateTime TimeStamp { get; set; }
     public One<EpiRun> EpiRun { get; set; }
+    public List<QtMeasurement> InitialMeasurements { get; set; } = [];
+    public List<QtMeasurement> FinalMeasurements { get; set; } = [];
     
-    public ICollection<QtMeasurement> InitialMeasurements { get; set; } = new ObservableCollection<QtMeasurement>();
-    public ICollection<QtMeasurement> FinalMeasurements { get; set; } = new ObservableCollection<QtMeasurement>();
-    
-
     static QuickTest() {
         DB.Index<QuickTest>()
           .Key(e=>e.WaferId,KeyType.Descending)
@@ -82,6 +90,15 @@ public class QuickTest:DocumentEntity,ICreatedOn,IModifiedOn {
     }
     public DateTime CreatedOn { get; set; }
     public DateTime ModifiedOn { get; set; }
+    public void UpdateEmbedded(IDocumentEntity entity) {
+        this.FinalMeasurements=((QuickTest)entity).FinalMeasurements;
+        this.InitialMeasurements=((QuickTest)entity).InitialMeasurements;
+    }
+
+    public async Task ApplyEmbeddedMigrations() {
+        await this.FinalMeasurements.ApplyEmbedded(typeof(QuickTest));
+        await this.InitialMeasurements.ApplyEmbedded(typeof(QuickTest));   
+    }
 }
 
 [Collection("xrd_data")]
@@ -109,8 +126,9 @@ public class QtMeasurement:IEmbeddedEntity {
     public double Current { get; set; }
     public double Wavelength { get; set; }
     public BsonDocument? AdditionalData { get; set; }
+    public Task Migrate(Type parent)
+        => this.ApplyEmbedded(parent);
 }
-
 
 public class XrdMeasurement:IEmbeddedEntity {
     public DateTime TimeStamp { get; set; }
@@ -126,6 +144,8 @@ public class XrdMeasurement:IEmbeddedEntity {
     public double FHWM102 { get; set; }
 
     public BsonDocument? AdditionalData { get; set; }
+    public async Task Migrate(Type parent)
+        => throw new NotImplementedException();
 }
 
 [Collection("run_monitoring")]

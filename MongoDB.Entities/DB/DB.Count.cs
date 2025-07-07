@@ -7,8 +7,7 @@ using MongoDB.Driver;
 namespace MongoDB.Entities;
 
 // ReSharper disable once InconsistentNaming
-public static partial class DB
-{
+public static partial class DB {
     /// <summary>
     /// Gets a fast estimation of how many documents are in the collection using metadata.
     /// <para>HINT: The estimation may not be exactly accurate.</para>
@@ -72,8 +71,7 @@ public static partial class DB
     /// <typeparam name="T">The entity type to get the count for</typeparam>
     /// <param name="session">An optional session if using within a transaction</param>
     /// <param name="cancellation">An optional cancellation token</param>
-    public static Task<long> CountAsync<T>(IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : IEntity
-    {
+    public static Task<long> CountAsync<T>(IClientSessionHandle? session = null, CancellationToken cancellation = default) where T : IEntity {
         return CountAsync<T>(_ => true, session, cancellation);
     }
 }

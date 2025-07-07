@@ -12,19 +12,19 @@ namespace MongoDB.Entities;
 public static partial class DB {
     static readonly BulkWriteOptions _unOrdBlkOpts = new() { IsOrdered = false };
     static readonly UpdateOptions _updateOptions = new() { IsUpsert = true };
-
+    
     /// <summary>
-    /// Saves a complete entity and migrates  the custom fields, replacing an existing entity or creating a new one if it does not exist.
+    /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
     /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
     /// </summary>
-    /// <typeparam name="T">Any class that implements DocumentEntity</typeparam>
+    /// <typeparam name="T">Any class that implements IEntity</typeparam>
     /// <param name="entity">The instance to persist</param>
     /// <param name="session">An optional session if using within a transaction</param>
     /// <param name="cancellation">And optional cancellation token</param>
-    public static async Task SaveMigrateAsync<T>(T entity, IClientSessionHandle? session = null,
-                                                 CancellationToken cancellation = default) where T : IDocumentEntity {
+    public static async Task SaveAsync<T>(T entity,
+                                          IClientSessionHandle? session = null,
+                                          CancellationToken cancellation = default) where T : IEntity {
         var filter = Builders<T>.Filter.Eq(Cache<T>.IdPropName, entity.GetId());
-        await ApplyMigrations(entity, cancellation: cancellation);
 
         if (PrepAndCheckIfInsert(entity)) {
             if (session == null) {
@@ -49,26 +49,35 @@ public static partial class DB {
             }
         }
     }
-
-    /*public static async Task CheckNeedsMigration<T>(T entity) where T : DocumentEntity {
-        var type = typeof(T);
-        var properties=type.GetProperties();
-    }*/
-
-    /// <summary>
-    /// Saves a complete entity replacing an existing entity or creating a new one if it does not exist.
-    /// If ID value is null, a new entity is created. If ID has a value, then existing entity is replaced.
-    /// </summary>
-    /// <typeparam name="T">Any class that implements IEntity</typeparam>
-    /// <param name="entity">The instance to persist</param>
-    /// <param name="session">An optional session if using within a transaction</param>
-    /// <param name="cancellation">And optional cancellation token</param>
-    public static Task SaveAsync<T>(T entity,
+    public static async Task SaveMigrateAsync<T>(T entity,
+                                    Dictionary<string, object>? additionalData=null,
                                     IClientSessionHandle? session = null,
-                                    CancellationToken cancellation = default) where T : IEntity {
+                                    CancellationToken cancellation = default) where T : IDocumentEntity {
         var filter = Builders<T>.Filter.Eq(Cache<T>.IdPropName, entity.GetId());
-
-        return PrepAndCheckIfInsert(entity)
+        await entity.ApplyMigrations(additionalData, cancellation);
+        if (PrepAndCheckIfInsert(entity)) {
+            if (session == null) {
+                await Collection<T>().InsertOneAsync(entity, null, cancellation);
+            } else {
+                await Collection<T>().InsertOneAsync(session, entity, null, cancellation);
+            }
+        } else {
+            if (session == null) {
+                await Collection<T>().ReplaceOneAsync(
+                    filter,
+                    entity,
+                    new ReplaceOptions { IsUpsert = true },
+                    cancellation);
+            } else {
+                await Collection<T>().ReplaceOneAsync(
+                    session,
+                    filter,
+                    entity,
+                    new ReplaceOptions { IsUpsert = true },
+                    cancellation);
+            }
+        }
+        /*return PrepAndCheckIfInsert(entity)
                    ? session == null
                          ? Collection<T>().InsertOneAsync(entity, null, cancellation)
                          : Collection<T>().InsertOneAsync(session, entity, null, cancellation)
@@ -83,8 +92,8 @@ public static partial class DB {
                            filter,
                            entity,
                            new ReplaceOptions { IsUpsert = true },
-                           cancellation);
-    }
+                           cancellation);*/
+        }
 
     /// <summary>
     /// Saves a batch of complete entities replacing existing ones or creating new ones if they do not exist.
@@ -95,11 +104,33 @@ public static partial class DB {
     /// <param name="session">An optional session if using within a transaction</param>
     /// <param name="cancellation">And optional cancellation token</param>
     public static Task<BulkWriteResult<T>> SaveAsync<T>(IEnumerable<T> entities,
-                                                        IClientSessionHandle? session = null,
-                                                        CancellationToken cancellation = default)
+                                                              IClientSessionHandle? session = null,
+                                                              CancellationToken cancellation = default)
         where T : IEntity {
         var models = new List<WriteModel<T>>(entities.Count());
+        foreach (var ent in entities) {
+            if (PrepAndCheckIfInsert(ent))
+                models.Add(new InsertOneModel<T>(ent));
+            else {
+                models.Add(
+                    new ReplaceOneModel<T>(
+                            filter: Builders<T>.Filter.Eq(ent.GetIdName(), ent.GetId()),
+                            replacement: ent)
+                        { IsUpsert = true });
+            }
+        }
+        return session == null
+                   ?  Collection<T>().BulkWriteAsync(models, _unOrdBlkOpts, cancellation)
+                   :  Collection<T>().BulkWriteAsync(session, models, _unOrdBlkOpts, cancellation);
+    }
 
+    public static async Task<BulkWriteResult<T>> SaveMigrateAsync<T>(IEnumerable<T> entities,
+                                                        List<Dictionary<string,object>>? additionalData=null,
+                                                        IClientSessionHandle? session = null,
+                                                        CancellationToken cancellation = default)
+        where T : IDocumentEntity {
+        var models = new List<WriteModel<T>>(entities.Count());
+        await entities.ApplyMigrations(additionalData, cancellation);
         foreach (var ent in entities) {
             if (PrepAndCheckIfInsert(ent))
                 models.Add(new InsertOneModel<T>(ent));
@@ -113,8 +144,8 @@ public static partial class DB {
         }
 
         return session == null
-                   ? Collection<T>().BulkWriteAsync(models, _unOrdBlkOpts, cancellation)
-                   : Collection<T>().BulkWriteAsync(session, models, _unOrdBlkOpts, cancellation);
+                   ? await Collection<T>().BulkWriteAsync(models, _unOrdBlkOpts, cancellation)
+                   : await Collection<T>().BulkWriteAsync(session, models, _unOrdBlkOpts, cancellation);
     }
 
     /// <summary>
@@ -293,8 +324,7 @@ public static partial class DB {
         var presProps = propsToUpdate.Where(p => p.IsDefined(typeof(PreserveAttribute), false)).Select(p => p.Name);
 
         if (dontProps.Any() && presProps.Any())
-            throw new NotSupportedException(
-                "[Preserve] and [DontPreserve] attributes cannot be used together on the same entity!");
+            throw new NotSupportedException("[Preserve] and [DontPreserve] attributes cannot be used together on the same entity!");
 
         if (dontProps.Any())
             propsToPreserve = propsToUpdate.Where(p => !dontProps.Contains(p.Name)).Select(p => p.Name);
@@ -385,6 +415,7 @@ public static partial class DB {
 
             return true;
         }
+
         if (Cache<T>.HasCreatedOn && ((ICreatedOn)entity).CreatedOn == DateTime.MinValue)
             ((ICreatedOn)entity).CreatedOn = DateTime.UtcNow;
         if (Cache<T>.HasModifiedOn)
