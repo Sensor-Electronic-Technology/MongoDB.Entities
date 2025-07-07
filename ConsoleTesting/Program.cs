@@ -29,13 +29,14 @@ await DB.InitAsync(
     enableLogging: true,
     assemblies: [typeof(EpiRun).Assembly]);
 
-/*await GenerateDataAndMigrations();*/
-/*Console.WriteLine("Press any key to add new data");
+
+await GenerateDataAndMigrations();
+Console.WriteLine("Press any key to add new data");
 Console.ReadLine();
-*/
-//await AddNewRunWithQtData("B15-9661-35");
-Console.WriteLine($"Types: {DB.DisplayTypes()}");
-Console.WriteLine($"Types: {DB.DisplayEmbeddedTypes()}");
+await AddNewRunWithQtData("B15-9661-35");
+await AddNewRunWithQtData("B16-9661-35");
+await AddNewRunWithQtData("B17-9661-35");
+
 
 async Task GenerateDataAndMigrations() {
     await GenerateEpiData();
@@ -112,12 +113,12 @@ async Task AddNewRunWithQtData(string waferId) {
 
     await run.SaveAsync();
     //await quickTestData.ApplyMigrations();
-    await quickTestData.SaveAsync();
+    await quickTestData.SaveMigrateAsync();
     
     run.QuickTest = quickTestData.ToReference();
     quickTestData.EpiRun = run.ToReference();
-    await run.SaveMigrateAsync();
-    await quickTestData.SaveMigrateAsync();
+    await run.SaveAsync();
+    await quickTestData.SaveAsync();
 }
 
 
